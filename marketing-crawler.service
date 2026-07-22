@@ -1,0 +1,17 @@
+[Unit]
+Description=Marketing Data Crawler & Lead Intelligence Rust Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/marketing-crawler
+ExecStart=/opt/marketing-crawler/marketing-data-crawler
+Restart=on-failure
+RestartSec=5s
+Environment=PORT=8080
+Environment=RUST_LOG=info
+Environment=DATABASE_PATH=/opt/marketing-crawler/marketing_leads.db
+
+[Install]
+WantedBy=multi-user.target

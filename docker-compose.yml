@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  crawler:
+    build: .
+    container_name: marketing_data_crawler
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - RUST_LOG=info
+      - DATABASE_PATH=/app/data/marketing_leads.db
+    volumes:
+      - crawler_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  crawler_data:

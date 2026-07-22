@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadPulse | Marketing Intelligence, Decision Makers & Outreach Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-radar text-accent"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>LeadPulse</h2>
+                    <span>B2B Market & People Intelligence</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard & Companies</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="people">
+                    <i class="fa-solid fa-user-tie"></i>
+                    <span>Decision Makers (CTO/VP)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="campaigns">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Outreach Campaigns</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="investors">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                    <span>Investor Intelligence</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="crawler">
+                    <i class="fa-solid fa-spider"></i>
+                    <span>Anti-Blocking Crawler</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="proxies">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Proxy Manager</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="logs">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>Crawl Logs</span>
+                </a>
+            </nav>
+
+            <div class="system-status-card">
+                <div class="status-indicator online" id="statusIndicator"></div>
+                <div class="status-details">
+                    <span class="status-label">Crawler Status</span>
+                    <strong id="crawlerStatusText">RUNNING</strong>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Toast Notification -->
+            <div id="copyToast" class="toast"><i class="fa-solid fa-circle-check"></i> <span id="toastMsg">Copied to clipboard!</span></div>
+
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="page-title">
+                    <h1 id="pageHeading">US & UK IT Company Lead Intelligence</h1>
+                    <p>Automated discovery, anti-blocking extraction & decision maker intelligence</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="btnAutoSeed">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Live Auto Seeds
+                    </button>
+                    <button class="btn btn-secondary" id="btnToggleCrawler">
+                        <i class="fa-solid fa-play"></i> Start Crawler
+                    </button>
+                    <button class="btn btn-primary" id="btnExportExcel">
+                        <i class="fa-solid fa-file-excel"></i> Export (.xlsx)
+                    </button>
+                </div>
+            </header>
+
+            <!-- Stats Banner -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fa-solid fa-building"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Verified Companies</span>
+                        <h3 id="statTotalLeads">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fa-solid fa-user-tie"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Decision Makers (CTO/VP)</span>
+                        <h3 id="statTotalPeople">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fa-solid fa-fire"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">High Intent (Score ≥ 80)</span>
+                        <h3 id="statHighIntent">0</h3>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-label">SaaS & AI Investors</span>
+                        <h3 id="statTotalInvestors">0</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Dashboard & Leads -->
+            <div class="tab-content active" id="tabDashboard">
+                <!-- Filter Panel -->
+                <div class="filter-bar card">
+                    <div class="filter-group search">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="filterSearch" placeholder="Search by company, domain, tech stack, industry...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Target Market</label>
+                        <select id="filterCountry">
+                            <option value="ALL">All Markets (US & UK)</option>
+                            <option value="US">United States (US)</option>
+                            <option value="UK">United Kingdom (UK)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Priority Tier</label>
+                        <select id="filterPriority">
+                            <option value="ALL">All Tiers</option>
+                            <option value="HIGH">High Priority (≥ 80)</option>
+                            <option value="MEDIUM">Medium Priority (60-79)</option>
+                            <option value="LOW">Low Priority (<60)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group checkbox">
+                        <label>
+                            <input type="checkbox" id="filterHiringOnly"> Hiring Companies Only
+                        </label>
+                        <label>
+                            <input type="checkbox" id="filterHasEmail" checked> Verified Email / Phone Only
+                        </label>
+                    </div>
+                    <button class="btn btn-secondary btn-icon" id="btnRefreshLeads" title="Refresh Leads">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                </div>
+
+                <!-- Leads Table Card -->
+                <div class="card table-card">
+                    <div class="card-header">
+                        <h3>Verified Target Companies (With Contact Email/Phone)</h3>
+                        <span class="badge" id="leadsCountBadge">Showing 0 companies</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Company & Domain</th>
+                                    <th>Market</th>
+                                    <th>Lead Score</th>
+                                    <th>Priority Tier</th>
+                                    <th>Contact Info</th>
+                                    <th>1-Click Copy</th>
+                                    <th>Hiring Signals</th>
+                                    <th>Tech Stack</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Decision Makers Intelligence -->
+            <div class="tab-content" id="tabPeople">
+                <div class="filter-bar card">
+                    <div class="filter-group search">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="filterPeopleSearch" placeholder="Search decision maker name, title, company...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Executive Role</label>
+                        <select id="filterPeopleRole">
+                            <option value="ALL">All Decision Makers</option>
+                            <option value="Technology Executive">Technology Executive (CTO/CIO)</option>
+                            <option value="Engineering Leadership">Engineering Leadership (VP Eng / Director)</option>
+                            <option value="Executive Management">Executive Management (CEO / Founder)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="btnExportPeople"><i class="fa-solid fa-file-excel"></i> Export Decision Makers (.xlsx)</button>
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-header">
+                        <h3>Ranked Decision Makers & Executives</h3>
+                        <span class="badge" id="peopleCountBadge">0 decision makers</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Executive Name & Title</th>
+                                    <th>Company Domain</th>
+                                    <th>AI Buyer Rank</th>
+                                    <th>Role Classification</th>
+                                    <th>Public Email</th>
+                                    <th>Phone</th>
+                                    <th>1-Click Copy</th>
+                                    <th>LinkedIn Profile</th>
+                                </tr>
+                            </thead>
+                            <tbody id="peopleTableBody">
+                                <!-- Dynamic Decision Makers -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Email Campaigns & Outreach -->
+            <div class="tab-content" id="tabCampaigns">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-paper-plane text-accent"></i> Create New Outreach Campaign</h3>
+                        </div>
+                        <form id="formCreateCampaign" class="form-grid">
+                            <div class="form-group">
+                                <label>Campaign Name</label>
+                                <input type="text" id="campaignName" placeholder="e.g. Q3 US CTO Outreach" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Target Decision Maker Role</label>
+                                <select id="campaignTargetRole">
+                                    <option value="Technology Executive">Technology Executive (CTO / CIO)</option>
+                                    <option value="Engineering Leadership">Engineering Leadership (VP Eng)</option>
+                                    <option value="Executive Management">Executive Management (CEO / Founder)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Subject Line Template</label>
+                                <input type="text" id="campaignSubject" value="Question regarding {{Company}} software roadmap" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Body Template</label>
+                                <textarea id="campaignBody" rows="5" required>Hi {{First_Name}},
+
+I saw your role as {{Title}} at {{Company}}.
+
+We at AGB Technologies help engineering leaders scale dedicated software teams and cloud infrastructure seamlessly.
+
+Would you be open to a 10-minute chat this Thursday to discuss your technical priorities?
+
+Best regards,
+AGB Technologies Team</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Launch Campaign</button>
+                        </form>
+                    </div>
+
+                    <div class="card table-card">
+                        <div class="card-header">
+                            <h3>Active Email Outreach Campaigns</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Campaign Name</th>
+                                        <th>Target Role</th>
+                                        <th>Status</th>
+                                        <th>Recipients</th>
+                                        <th>Sent</th>
+                                        <th>Opened</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="campaignTableBody">
+                                    <!-- Dynamic Campaigns -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Investor Intelligence & Matching Engine -->
+            <div class="tab-content" id="tabInvestors">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-robot text-accent"></i> Automated AI Matching Engine for AGB Technologies</h3>
+                        <button class="btn btn-primary" id="btnRunAGBMatch"><i class="fa-solid fa-bolt"></i> Run Investor Match for AGB Tech</button>
+                    </div>
+                    <p style="color:var(--text-secondary); font-size:12px; margin-bottom:16px;">
+                        Matches AGB Technologies criteria (B2B SaaS, AI, Enterprise Automation, India market, Seed stage $250K-$2M) against verified angel investors and funds to calculate instant match scores.
+                    </p>
+                </div>
+
+                <div class="filter-bar card">
+                    <div class="filter-group search">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="filterInvSearch" placeholder="Search investor name, focus, portfolio...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Investor Type</label>
+                        <select id="filterInvType">
+                            <option value="ALL">All Types</option>
+                            <option value="Micro VC">Micro VC</option>
+                            <option value="Syndicate">Syndicate</option>
+                            <option value="Angel Group">Angel Group</option>
+                            <option value="Family Office">Family Office</option>
+                            <option value="Accelerator">Accelerator</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Focus Sector</label>
+                        <select id="filterInvFocus">
+                            <option value="ALL">All Sectors</option>
+                            <option value="B2B SaaS">B2B SaaS</option>
+                            <option value="AI">AI / Automation</option>
+                            <option value="Enterprise">Enterprise Software</option>
+                            <option value="India">India Focus</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="btnExportInvestors"><i class="fa-solid fa-file-excel"></i> Export Investors (.xlsx)</button>
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-header">
+                        <h3>Verified B2B SaaS & AI Investors</h3>
+                        <span class="badge" id="investorCountBadge">0 investors</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Investor / Fund</th>
+                                    <th>Type & Market</th>
+                                    <th>Match Score</th>
+                                    <th>Check Size</th>
+                                    <th>Contact Info</th>
+                                    <th>1-Click Copy</th>
+                                    <th>Focus Sectors</th>
+                                    <th>Portfolio Highlights</th>
+                                </tr>
+                            </thead>
+                            <tbody id="investorTableBody">
+                                <!-- Dynamic Investors -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Anti-Blocking Crawler Config -->
+            <div class="tab-content" id="tabCrawler">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-sliders"></i> Anti-Blocking Stealth Settings</h3>
+                        </div>
+                        <form id="formCrawlerSettings" class="form-grid">
+                            <div class="form-group">
+                                <label>Crawl Behavior Mode</label>
+                                <select id="settingMode">
+                                    <option value="stealth" selected>Stealth / Human Mode (Random Delays 1.5s - 4.0s)</option>
+                                    <option value="balanced">Balanced Mode (Delays 0.8s - 2.0s)</option>
+                                    <option value="fast">Fast Mode (High Speed)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Max Pages Per Domain (Crawl Budget)</label>
+                                <input type="number" id="settingMaxPages" value="5" min="1" max="20">
+                            </div>
+                            <div class="form-group">
+                                <label>User-Agent & Header Rotation</label>
+                                <select id="settingUARotation">
+                                    <option value="true">Enabled (Emulate Chrome, Firefox, Edge, Safari)</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Proxy Rotation Pool</label>
+                                <select id="settingProxyRotation">
+                                    <option value="true">Enabled (Round-Robin Pool)</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-seedling"></i> Discovery & Seed Manager</h3>
+                        </div>
+                        <div class="form-group">
+                            <label>Target Seed URLs (One per line)</label>
+                            <textarea id="seedUrlsArea" rows="6" placeholder="https://company1.com&#10;https://company2.co.uk"></textarea>
+                        </div>
+                        <div class="button-row">
+                            <button class="btn btn-secondary" id="btnTriggerAutoSeeds"><i class="fa-solid fa-robot"></i> Run Auto Seed Discovery</button>
+                            <button class="btn btn-primary" id="btnLaunchCrawl"><i class="fa-solid fa-play"></i> Launch Crawl Engine</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Proxy Manager -->
+            <div class="tab-content" id="tabProxies">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-network-wired"></i> Anti-Blocking Proxy Rotation Pool</h3>
+                        <button class="btn btn-secondary" id="btnAddProxyModalBtn"><i class="fa-solid fa-plus"></i> Add Proxies</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Proxy Address</th>
+                                    <th>Protocol</th>
+                                    <th>Status</th>
+                                    <th>Successes</th>
+                                    <th>Failures</th>
+                                    <th>Latency</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proxyTableBody">
+                                <!-- Dynamic Proxies -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Crawl Logs -->
+            <div class="tab-content" id="tabLogs">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-terminal"></i> Live Crawlers Console Logs</h3>
+                        <button class="btn btn-secondary btn-sm" id="btnClearLogs"><i class="fa-solid fa-trash"></i> Clear</button>
+                    </div>
+                    <div class="console-box" id="consoleLogs">
+                        <!-- Dynamic Console -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Lead Detail Drawer / Modal -->
+    <div class="modal-overlay" id="leadModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modalCompanyName">Company Details</h3>
+                <button class="btn-close" id="btnCloseModal">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic detail breakdown -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

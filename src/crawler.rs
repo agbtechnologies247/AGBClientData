@@ -1,0 +1,307 @@
+use crate::db::Database;
+use crate::discovery::AutoSeedDiscovery;
+use crate::models::{Company, CrawlerSettings};
+use crate::parser::{extract_domain, parse_html};
+use crate::people::DecisionMakerEngine;
+use crate::proxy::ProxyManager;
+use crate::score::calculate_score;
+use crate::validator::ContactValidator;
+use futures::stream::{self, StreamExt};
+use reqwest::{Client, Proxy};
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use tokio::time::{sleep, Duration};
+
+pub struct AntiBlockingCrawler {
+    db: Database,
+    proxy_mgr: ProxyManager,
+    validator: Arc<ContactValidator>,
+    is_running: Arc<AtomicBool>,
+    settings: Arc<RwLock<CrawlerSettings>>,
+    current_domain: Arc<RwLock<Option<String>>>,
+}
+
+impl AntiBlockingCrawler {
+    pub fn new(db: Database, proxy_mgr: ProxyManager) -> Self {
+        Self {
+            db,
+            proxy_mgr,
+            validator: Arc::new(ContactValidator::new()),
+            is_running: Arc::new(AtomicBool::new(false)),
+            settings: Arc::new(RwLock::new(CrawlerSettings {
+                mode: "stealth".to_string(),
+                max_pages_per_domain: 5,
+                concurrency_limit: 3,
+                min_delay_ms: 1500,
+                max_delay_ms: 3500,
+                user_agent_rotation: true,
+                proxy_rotation: true,
+            })),
+            current_domain: Arc::new(RwLock::new(None)),
+        }
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.is_running.load(Ordering::SeqCst)
+    }
+
+    pub async fn current_domain(&self) -> Option<String> {
+        self.current_domain.read().await.clone()
+    }
+
+    pub fn stop(&self) {
+        self.is_running.store(false, Ordering::SeqCst);
+    }
+
+    pub async fn start_daemon_loop(&self) {
+        let discovery = AutoSeedDiscovery::new(self.db.clone());
+        let seeds = discovery.generate_validated_seeds(None);
+        self.start_crawl(seeds, Some("stealth".to_string())).await;
+    }
+
+    pub async fn start_crawl(&self, seed_urls: Vec<String>, mode: Option<String>) {
+        if self.is_running.load(Ordering::SeqCst) {
+            return;
+        }
+
+        let concurrency = if let Some(ref m) = mode {
+            let mut s = self.settings.write().await;
+            s.mode = m.clone();
+            match m.as_str() {
+                "fast" => {
+                    s.min_delay_ms = 300;
+                    s.max_delay_ms = 800;
+                    s.concurrency_limit = 5;
+                    5
+                }
+                "balanced" => {
+                    s.min_delay_ms = 800;
+                    s.max_delay_ms = 2000;
+                    s.concurrency_limit = 3;
+                    3
+                }
+                _ => {
+                    s.min_delay_ms = 1500;
+                    s.max_delay_ms = 4000;
+                    s.concurrency_limit = 2;
+                    2
+                }
+            }
+        } else {
+            2
+        };
+
+        self.is_running.store(true, Ordering::SeqCst);
+        let db = self.db.clone();
+        let proxy_mgr = self.proxy_mgr.clone();
+        let validator = self.validator.clone();
+        let is_running = self.is_running.clone();
+        let settings = self.settings.clone();
+        let current_domain_store = self.current_domain.clone();
+
+        tokio::spawn(async move {
+            let _ = db.log_event("INFO", "CRAWLER", &format!("Starting async bounded crawler session with {} seed targets (Concurrency: {})", seed_urls.len(), concurrency));
+
+            let visited_in_session = Arc::new(tokio::sync::Mutex::new(HashSet::new()));
+
+            stream::iter(seed_urls)
+                .for_each_concurrent(concurrency, |url| {
+                    let db = db.clone();
+                    let proxy_mgr = proxy_mgr.clone();
+                    let validator = validator.clone();
+                    let is_running = is_running.clone();
+                    let settings = settings.clone();
+                    let current_domain_store = current_domain_store.clone();
+                    let visited_in_session = visited_in_session.clone();
+
+                    async move {
+                        if !is_running.load(Ordering::SeqCst) {
+                            return;
+                        }
+
+                        let domain = match extract_domain(&url) {
+                            Some(d) => d,
+                            None => return,
+                        };
+
+                        {
+                            let mut visited = visited_in_session.lock().await;
+                            if visited.contains(&domain) || db.is_domain_crawled(&domain).unwrap_or(false) {
+                                let _ = db.log_event("INFO", &domain, "Skipping target domain - already crawled.");
+                                return;
+                            }
+                            visited.insert(domain.clone());
+                        }
+
+                        {
+                            let mut cd = current_domain_store.write().await;
+                            *cd = Some(domain.clone());
+                        }
+
+                        // Attach rotating proxy to reqwest Client
+                        let mut client_builder = Client::builder()
+                            .timeout(Duration::from_secs(12))
+                            .default_headers(proxy_mgr.build_stealth_headers());
+
+                        if let Some(proxy_url) = proxy_mgr.get_next_proxy().await {
+                            if let Ok(proxy) = Proxy::all(&proxy_url) {
+                                client_builder = client_builder.proxy(proxy);
+                                let _ = db.log_event("INFO", &domain, &format!("Using anti-blocking proxy {}", proxy_url));
+                            }
+                        }
+
+                        let client = match client_builder.build() {
+                            Ok(c) => c,
+                            Err(e) => {
+                                let _ = db.log_event("ERROR", &domain, &format!("HTTP client build error: {}", e));
+                                return;
+                            }
+                        };
+
+                        let mut all_emails = HashSet::new();
+                        let mut all_phones = HashSet::new();
+                        let mut contact_subpage = None;
+                        let mut linkedin_url = None;
+                        let mut hiring_signals = Vec::new();
+                        let mut engineering_jobs = 0;
+                        let mut remote_jobs = 0;
+                        let mut outsourcing_keywords = 0;
+                        let mut tech_stack = Vec::new();
+                        let mut pages_crawled = 0;
+
+                        let target_subpaths = vec!["", "/contact", "/about", "/team", "/careers", "/contact-us"];
+
+                        for subpath in target_subpaths {
+                            if pages_crawled >= 4 { break; }
+                            let crawl_target = if subpath.is_empty() {
+                                url.clone()
+                            } else {
+                                format!("https://{}{}", domain, subpath)
+                            };
+
+                            match client.get(&crawl_target).send().await {
+                                Ok(resp) => {
+                                    if resp.status().is_success() {
+                                        if let Ok(html) = resp.text().await {
+                                            pages_crawled += 1;
+                                            let parsed = parse_html(&crawl_target, &html);
+
+                                            for e in parsed.emails { all_emails.insert(e); }
+                                            for p in parsed.phones { all_phones.insert(p); }
+                                            if parsed.linkedin_url.is_some() && linkedin_url.is_none() { linkedin_url = parsed.linkedin_url; }
+                                            if parsed.contact_url.is_some() && contact_subpage.is_none() { contact_subpage = parsed.contact_url; }
+                                            
+                                            hiring_signals.extend(parsed.hiring_signals);
+                                            engineering_jobs += parsed.engineering_jobs;
+                                            remote_jobs += parsed.remote_jobs;
+                                            outsourcing_keywords += parsed.outsourcing_keywords;
+                                            for t in parsed.tech_stack { if !tech_stack.contains(&t) { tech_stack.push(t); } }
+
+                                            if subpath.contains("team") || subpath.contains("about") || subpath.contains("leadership") {
+                                                let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
+                                                for p in people {
+                                                    let _ = db.save_person(&p);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(_) => {}
+                            }
+                        }
+
+                        let primary_email = all_emails.iter().next().cloned();
+                        let raw_phone = all_phones.iter().next().cloned();
+
+                        if primary_email.is_some() || raw_phone.is_some() {
+                            let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
+                                "UK".to_string()
+                            } else {
+                                "US".to_string()
+                            };
+
+                            let company_name = domain.split('.').next().unwrap_or(&domain).to_string();
+                            let formatted_name = uppercase_first_letter(&company_name);
+
+                            let val_res = validator.validate_contact_confidence(
+                                primary_email.as_deref(),
+                                raw_phone.as_deref(),
+                                &domain,
+                                contact_subpage.is_some(),
+                                true,
+                            ).await;
+
+                            let normalized_phone = val_res.phone_e164.or(raw_phone);
+
+                            let mut company = Company {
+                                id: 0,
+                                name: formatted_name,
+                                domain: domain.clone(),
+                                website: url.clone(),
+                                country: inferred_country,
+                                city: None,
+                                industry: Some("Software & IT Services".to_string()),
+                                email: primary_email.clone(),
+                                phone: normalized_phone,
+                                contact_url: contact_subpage,
+                                linkedin_url,
+                                hiring: !hiring_signals.is_empty(),
+                                engineering_jobs,
+                                remote_jobs,
+                                outsourcing_keywords,
+                                lead_score: 0,
+                                priority_tier: "LOW".to_string(),
+                                tech_stack,
+                                last_crawled: None,
+                            };
+
+                            calculate_score(&mut company, &hiring_signals);
+                            company.lead_score += (val_res.confidence_score as f32 * 0.2) as i32;
+
+                            let _ = db.save_company(&company);
+                            let _ = db.mark_domain_crawled(&domain, "COMPLETED");
+
+                            let _ = db.log_event(
+                                "SUCCESS",
+                                &domain,
+                                &format!("Crawled & saved new lead! Score: {} | Emails: {:?}", company.lead_score, all_emails),
+                            );
+                        } else {
+                            let _ = db.mark_domain_crawled(&domain, "NO_CONTACT");
+                            let _ = db.log_event("WARN", &domain, "Skipped company - no verified email or phone found.");
+                        }
+
+                        let delay = {
+                            let s = settings.read().await;
+                            let range = s.max_delay_ms.saturating_sub(s.min_delay_ms);
+                            if range > 0 {
+                                s.min_delay_ms + (rand::random::<u64>() % range)
+                            } else {
+                                s.min_delay_ms
+                            }
+                        };
+
+                        sleep(Duration::from_millis(delay)).await;
+                    }
+                })
+                .await;
+
+            {
+                let mut cd = current_domain_store.write().await;
+                *cd = None;
+            }
+            is_running.store(false, Ordering::SeqCst);
+            let _ = db.log_event("INFO", "CRAWLER", "Crawl session completed. Continuous loop standby.");
+        });
+    }
+}
+
+fn uppercase_first_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
