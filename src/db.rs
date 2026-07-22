@@ -811,4 +811,59 @@ impl Database {
         }
         Ok(logs)
     }
+
+    pub fn clear_executed_queries(&self) -> Result<usize> {
+        let conn = self.conn.lock().unwrap();
+        let deleted = conn.execute("DELETE FROM search_queries", [])?;
+        Ok(deleted)
+    }
+
+    pub fn enqueue_domain(&self, domain: &str, url: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1",
+            params![domain],
+            |r| r.get(0),
+        )?;
+        if count > 0 {
+            return Ok(false);
+        }
+
+        let inserted = conn.execute(
+            "INSERT OR IGNORE INTO crawl_queue (domain, url, depth, status) VALUES (?1, ?2, 0, 'PENDING')",
+            params![domain, url],
+        )?;
+        Ok(inserted > 0)
+    }
+
+    pub fn pop_pending_queue_domains(&self, limit: usize) -> Result<Vec<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, domain, url FROM crawl_queue 
+             WHERE status = 'PENDING' 
+             AND domain NOT IN (SELECT domain FROM crawled_domains) 
+             LIMIT ?"
+        )?;
+        
+        let rows = stmt.query_map(params![limit as i64], |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?))
+        })?;
+
+        let mut ids = Vec::new();
+        let mut urls = Vec::new();
+
+        for row in rows {
+            if let Ok((id, _domain, url)) = row {
+                ids.push(id);
+                urls.push(url);
+            }
+        }
+
+        for id in ids {
+            let _ = conn.execute("UPDATE crawl_queue SET status = 'PROCESSING' WHERE id = ?1", params![id]);
+        }
+
+        Ok(urls)
+    }
 }
+

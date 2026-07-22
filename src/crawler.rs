@@ -34,8 +34,8 @@ impl AntiBlockingCrawler {
                 mode: "stealth".to_string(),
                 max_pages_per_domain: 5,
                 concurrency_limit: 3,
-                min_delay_ms: 1500,
-                max_delay_ms: 3500,
+                min_delay_ms: 1000,
+                max_delay_ms: 2500,
                 user_agent_rotation: true,
                 proxy_rotation: true,
             })),
@@ -55,10 +55,20 @@ impl AntiBlockingCrawler {
         self.is_running.store(false, Ordering::SeqCst);
     }
 
+    /// Continuous Infinite Daemon Loop: automatically discovers fresh target URLs and crawls 24/7
     pub async fn start_daemon_loop(&self) {
         let discovery = AutoSeedDiscovery::new(self.db.clone());
-        let seeds = discovery.generate_validated_seeds(None);
-        self.start_crawl(seeds, Some("stealth".to_string())).await;
+        let _ = self.db.log_event("INFO", "DAEMON", "Continuous 24/7 Market Discovery & Crawl Daemon activated.");
+
+        loop {
+            if !self.is_running() {
+                let seeds = discovery.discover_live_seeds(None).await;
+                if !seeds.is_empty() {
+                    self.start_crawl(seeds, Some("stealth".to_string())).await;
+                }
+            }
+            sleep(Duration::from_secs(60)).await;
+        }
     }
 
     pub async fn start_crawl(&self, seed_urls: Vec<String>, mode: Option<String>) {
@@ -83,14 +93,14 @@ impl AntiBlockingCrawler {
                     3
                 }
                 _ => {
-                    s.min_delay_ms = 1500;
-                    s.max_delay_ms = 4000;
-                    s.concurrency_limit = 2;
-                    2
+                    s.min_delay_ms = 1000;
+                    s.max_delay_ms = 2500;
+                    s.concurrency_limit = 3;
+                    3
                 }
             }
         } else {
-            2
+            3
         };
 
         self.is_running.store(true, Ordering::SeqCst);
@@ -129,7 +139,6 @@ impl AntiBlockingCrawler {
                         {
                             let mut visited = visited_in_session.lock().await;
                             if visited.contains(&domain) || db.is_domain_crawled(&domain).unwrap_or(false) {
-                                let _ = db.log_event("INFO", &domain, "Skipping target domain - already crawled.");
                                 return;
                             }
                             visited.insert(domain.clone());
@@ -140,7 +149,6 @@ impl AntiBlockingCrawler {
                             *cd = Some(domain.clone());
                         }
 
-                        // Attach rotating proxy to reqwest Client
                         let mut client_builder = Client::builder()
                             .timeout(Duration::from_secs(12))
                             .default_headers(proxy_mgr.build_stealth_headers());
@@ -148,7 +156,6 @@ impl AntiBlockingCrawler {
                         if let Some(proxy_url) = proxy_mgr.get_next_proxy().await {
                             if let Ok(proxy) = Proxy::all(&proxy_url) {
                                 client_builder = client_builder.proxy(proxy);
-                                let _ = db.log_event("INFO", &domain, &format!("Using anti-blocking proxy {}", proxy_url));
                             }
                         }
 
@@ -171,10 +178,10 @@ impl AntiBlockingCrawler {
                         let mut tech_stack = Vec::new();
                         let mut pages_crawled = 0;
 
-                        let target_subpaths = vec!["", "/contact", "/about", "/team", "/careers", "/contact-us"];
+                        let target_subpaths = vec!["", "/contact", "/contact-us", "/about", "/about-us", "/team", "/our-team", "/careers", "/leadership", "/services"];
 
                         for subpath in target_subpaths {
-                            if pages_crawled >= 4 { break; }
+                            if pages_crawled >= 5 { break; }
                             let crawl_target = if subpath.is_empty() {
                                 url.clone()
                             } else {
@@ -198,6 +205,13 @@ impl AntiBlockingCrawler {
                                             remote_jobs += parsed.remote_jobs;
                                             outsourcing_keywords += parsed.outsourcing_keywords;
                                             for t in parsed.tech_stack { if !tech_stack.contains(&t) { tech_stack.push(t); } }
+
+                                            // Graph Crawl: Enqueue discovered external target domains
+                                            for ext_url in parsed.external_links {
+                                                if let Some(ext_dom) = extract_domain(&ext_url) {
+                                                    let _ = db.enqueue_domain(&ext_dom, &ext_url);
+                                                }
+                                            }
 
                                             if subpath.contains("team") || subpath.contains("about") || subpath.contains("leadership") {
                                                 let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
@@ -266,11 +280,10 @@ impl AntiBlockingCrawler {
                             let _ = db.log_event(
                                 "SUCCESS",
                                 &domain,
-                                &format!("Crawled & saved new lead! Score: {} | Emails: {:?}", company.lead_score, all_emails),
+                                &format!("Crawled & saved lead! Score: {} | Emails: {:?}", company.lead_score, all_emails),
                             );
                         } else {
                             let _ = db.mark_domain_crawled(&domain, "NO_CONTACT");
-                            let _ = db.log_event("WARN", &domain, "Skipped company - no verified email or phone found.");
                         }
 
                         let delay = {
@@ -293,7 +306,7 @@ impl AntiBlockingCrawler {
                 *cd = None;
             }
             is_running.store(false, Ordering::SeqCst);
-            let _ = db.log_event("INFO", "CRAWLER", "Crawl session completed. Continuous loop standby.");
+            let _ = db.log_event("INFO", "CRAWLER", "Crawl session complete. Continuous daemon standby.");
         });
     }
 }

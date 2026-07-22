@@ -38,6 +38,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/crawler/start", post(start_crawler_handler))
         .route("/api/crawler/stop", post(stop_crawler_handler))
         .route("/api/crawler/auto-seeds", post(auto_discover_seeds_handler))
+        .route("/api/crawler/reset-queries", post(reset_queries_handler))
         .route("/api/proxies", get(get_proxies_handler).post(add_proxies_handler))
         .route("/api/logs", get(get_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
@@ -256,6 +257,21 @@ async fn auto_discover_seeds_handler(State(state): State<AppState>) -> Response 
         })),
     )
         .into_response()
+}
+
+async fn reset_queries_handler(State(state): State<AppState>) -> Response {
+    match state.db.clear_executed_queries() {
+        Ok(count) => (
+            StatusCode::OK,
+            Json(json!({"status": "SUCCESS", "cleared_queries": count})),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
 }
 
 async fn get_proxies_handler(State(state): State<AppState>) -> Response {

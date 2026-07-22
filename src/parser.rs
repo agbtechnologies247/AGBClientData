@@ -9,6 +9,7 @@ pub struct ParsedContent {
     pub linkedin_url: Option<String>,
     pub contact_url: Option<String>,
     pub internal_links: Vec<String>,
+    pub external_links: Vec<String>,
     pub hiring_signals: Vec<String>,
     pub engineering_jobs: usize,
     pub remote_jobs: usize,
@@ -24,7 +25,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
     let email_regex = Regex::new(r"(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}").unwrap();
     for mat in email_regex.find_iter(html_body) {
         let email = mat.as_str().to_lowercase();
-        if isValidBusinessEmail(&email) {
+        if is_valid_business_email(&email) {
             emails_set.insert(email);
         }
     }
@@ -35,7 +36,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         if let Some(href) = element.value().attr("href") {
             let email_raw = href.trim_start_matches("mailto:").split('?').next().unwrap_or("");
             let clean = email_raw.trim().to_lowercase();
-            if isValidBusinessEmail(&clean) {
+            if is_valid_business_email(&clean) {
                 emails_set.insert(clean);
             }
         }
@@ -61,12 +62,13 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 4. Link Extraction (Contact, Team, Careers, LinkedIn)
+    // 4. Link Extraction (Contact, Team, Careers, LinkedIn, External Links)
     let link_selector = Selector::parse("a[href]").unwrap();
     let base_parsed = Url::parse(base_url).ok();
     let mut contact_url = None;
     let mut linkedin_url = None;
     let mut internal_links_set = HashSet::new();
+    let mut external_links_set = HashSet::new();
 
     for element in document.select(&link_selector) {
         if let Some(href) = element.value().attr("href") {
@@ -82,6 +84,8 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
                             contact_url = Some(abs_url.to_string());
                         }
                         internal_links_set.insert(abs_url.to_string());
+                    } else if abs_url.scheme() == "http" || abs_url.scheme() == "https" {
+                        external_links_set.insert(abs_url.to_string());
                     }
                 }
             }
@@ -161,6 +165,8 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
     phones.sort();
     let mut internal_links: Vec<String> = internal_links_set.into_iter().collect();
     internal_links.truncate(20);
+    let mut external_links: Vec<String> = external_links_set.into_iter().collect();
+    external_links.truncate(30);
 
     ParsedContent {
         emails,
@@ -168,6 +174,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         linkedin_url,
         contact_url,
         internal_links,
+        external_links,
         hiring_signals,
         engineering_jobs,
         remote_jobs,
@@ -176,7 +183,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
     }
 }
 
-fn isValidBusinessEmail(email: &str) -> bool {
+fn is_valid_business_email(email: &str) -> bool {
     let lower = email.to_lowercase();
     if lower.ends_with(".png") || lower.ends_with(".jpg") || lower.ends_with(".svg") || lower.ends_with(".js") || lower.ends_with(".css") {
         return false;
