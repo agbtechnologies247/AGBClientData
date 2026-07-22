@@ -29,6 +29,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/stats", get(get_stats_handler))
         .route("/api/leads", get(get_leads_handler))
         .route("/api/leads/:id", get(get_lead_by_id_handler))
+        .route("/api/leads/:id/stage", post(update_lead_stage_handler))
         .route("/api/people", get(get_people_handler))
         .route("/api/people/export", get(export_people_handler))
         .route("/api/campaigns", get(get_campaigns_handler).post(create_campaign_handler))
@@ -107,6 +108,17 @@ async fn get_lead_by_id_handler(
         }
     }
     (StatusCode::NOT_FOUND, Json(json!({"error": "Lead not found"}))).into_response()
+}
+
+async fn update_lead_stage_handler(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(payload): Json<crate::models::UpdateLeadStageRequest>,
+) -> Response {
+    match state.db.update_company_qualification_stage(id, &payload.stage) {
+        Ok(_) => (StatusCode::OK, Json(json!({"status": "success", "id": id, "stage": payload.stage}))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    }
 }
 
 async fn get_people_handler(

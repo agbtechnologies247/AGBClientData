@@ -20,8 +20,14 @@ pub struct Company {
     pub lead_score: i32,
     pub priority_tier: String, // "HIGH", "MEDIUM", "LOW"
     pub tech_stack: Vec<String>,
+    pub qualification_stage: String, // "DISCOVERED", "ENRICHED", "CONTACTED", "QUALIFIED", "PROPOSAL", "WON"
     pub contact_person: Option<String>,
     pub last_crawled: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateLeadStageRequest {
+    pub stage: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

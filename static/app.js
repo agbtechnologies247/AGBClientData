@@ -641,9 +641,152 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Pipeline Loader & Kanban Board
+    async function loadPipeline() {
+        try {
+            const res = await fetch('/api/leads?limit=100');
+            const data = await res.json();
+            const container = document.getElementById('pipelineContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const stages = [
+                { id: 'DISCOVERED', name: 'Discovered Target' },
+                { id: 'ENRICHED', name: 'Enriched & Verified' },
+                { id: 'CONTACTED', name: 'Outreach Contacted' },
+                { id: 'QUALIFIED', name: 'Qualified Lead' },
+                { id: 'PROPOSAL', name: 'Proposal Sent' },
+                { id: 'WON', name: 'Deal Won ✓' }
+            ];
+
+            stages.forEach(st => {
+                const colLeads = data.leads.filter(l => (l.qualification_stage || 'DISCOVERED') === st.id);
+                const col = document.createElement('div');
+                col.className = 'pipeline-col';
+                col.innerHTML = `
+                    <div class="pipeline-col-header">
+                        <span>${st.name}</span>
+                        <span class="badge" style="background:var(--bg-subtle); border:1px solid var(--border-color);">${colLeads.length}</span>
+                    </div>
+                    <div style="flex:1;">
+                        ${colLeads.map(l => `
+                            <div class="pipeline-card">
+                                <strong>${l.name}</strong>
+                                <span>${l.domain}</span>
+                                <span>${l.contact_person || 'Executive Leadership'}</span>
+                                <select class="pipeline-select" onchange="updateLeadStage(${l.id}, this.value)">
+                                    ${stages.map(s => `<option value="${s.id}" ${s.id === st.id ? 'selected' : ''}>Move to: ${s.name}</option>`).join('')}
+                                </select>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        } catch (err) {
+            console.error("Error loading pipeline:", err);
+        }
+    }
+
+    window.updateLeadStage = async function(id, stage) {
+        try {
+            const res = await fetch(`/api/leads/${id}/stage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stage })
+            });
+            if (res.ok) {
+                showToast(`Lead moved to stage: ${stage}`);
+                loadPipeline();
+                loadLeads();
+            }
+        } catch (err) {
+            console.error("Error updating lead stage:", err);
+        }
+    };
+
+    // Live HTML Preview Modal
+    const btnPreviewHtml = document.getElementById('btnPreviewHtml');
+    const htmlPreviewModal = document.getElementById('htmlPreviewModal');
+    const btnCloseHtmlModal = document.getElementById('btnCloseHtmlModal');
+
+    if (btnPreviewHtml && htmlPreviewModal) {
+        btnPreviewHtml.addEventListener('click', () => {
+            const bodyHtml = document.getElementById('campaignBody').value;
+            const previewFrame = document.getElementById('htmlPreviewFrame');
+            previewFrame.innerHTML = bodyHtml;
+            htmlPreviewModal.classList.add('active');
+        });
+    }
+
+    if (btnCloseHtmlModal && htmlPreviewModal) {
+        btnCloseHtmlModal.addEventListener('click', () => {
+            htmlPreviewModal.classList.remove('active');
+        });
+    }
+
+    // Custom Seed Batch Enqueueing
+    const btnEnqueueCustomSeeds = document.getElementById('btnEnqueueCustomSeeds');
+    if (btnEnqueueCustomSeeds) {
+        btnEnqueueCustomSeeds.addEventListener('click', async () => {
+            const raw = document.getElementById('customSeedDomains').value;
+            const urls = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0).map(d => d.startsWith('http') ? d : `https://${d}`);
+            if (urls.length === 0) {
+                alert("Please enter at least one target domain.");
+                return;
+            }
+            try {
+                const res = await fetch('/api/crawler/auto-seeds', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seed_urls: urls })
+                });
+                if (res.ok) {
+                    showToast(`Enqueued ${urls.length} target seeds into crawl queue!`);
+                    document.getElementById('customSeedDomains').value = '';
+                }
+            } catch (err) {
+                console.error("Error enqueuing seeds:", err);
+            }
+        });
+    }
+
+    // Table Header Click-To-Sort System
+    function makeTableSortable(tableSelector) {
+        const table = document.querySelector(tableSelector);
+        if (!table) return;
+        const headers = table.querySelectorAll('th');
+        headers.forEach((th, idx) => {
+            th.classList.add('sortable');
+            th.addEventListener('click', () => {
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const isAsc = th.getAttribute('data-sort') === 'asc';
+                rows.sort((a, b) => {
+                    const cellA = a.children[idx]?.innerText.trim() || '';
+                    const cellB = b.children[idx]?.innerText.trim() || '';
+                    return isAsc ? cellA.localeCompare(cellB, undefined, {numeric: true}) : cellB.localeCompare(cellA, undefined, {numeric: true});
+                });
+                headers.forEach(h => h.removeAttribute('data-sort'));
+                th.setAttribute('data-sort', isAsc ? 'desc' : 'asc');
+                tbody.innerHTML = '';
+                rows.forEach(r => tbody.appendChild(r));
+            });
+        });
+    }
+
+    makeTableSortable('#tabDashboard table');
+    makeTableSortable('#tabPeople table');
+    makeTableSortable('#tabInvestors table');
+
+    // Pipeline Refresh Event
+    const btnRefreshPipeline = document.getElementById('btnRefreshPipeline');
+    if (btnRefreshPipeline) btnRefreshPipeline.addEventListener('click', loadPipeline);
+
     // Initial Load & Refresh Interval
     loadStats();
     loadLeads();
+    loadPipeline();
     setInterval(loadStats, 4000);
     setInterval(loadLogs, 5000);
 });

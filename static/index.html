@@ -29,6 +29,14 @@
                     <i class="fa-solid fa-chart-pie"></i>
                     <span>Dashboard & Companies</span>
                 </a>
+                <a href="#" class="nav-item" data-tab="pipeline">
+                    <i class="fa-solid fa-kanban"></i>
+                    <span>Leads Pipeline (Stages)</span>
+                </a>
+                <a href="#" class="nav-item" data-tab="discovery">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Discovery & Seed Manager</span>
+                </a>
                 <a href="#" class="nav-item" data-tab="people">
                     <i class="fa-solid fa-user-tie"></i>
                     <span>Decision Makers (CTO/VP)</span>
@@ -187,6 +195,54 @@
                 </div>
             </div>
 
+            <!-- Tab: Leads Qualification Pipeline -->
+            <div class="tab-content" id="tabPipeline">
+                <div class="card" style="padding: 20px 24px; margin-bottom: 24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <h3 style="font-size:20px; font-weight:700;">Multi-Stage Leads Qualification Pipeline</h3>
+                            <p style="color:var(--text-secondary); font-size:14px;">Track and qualify discovered target companies through sales stages</p>
+                        </div>
+                        <button class="btn btn-secondary" id="btnRefreshPipeline"><i class="fa-solid fa-rotate-right"></i> Refresh Pipeline</button>
+                    </div>
+                </div>
+
+                <div class="pipeline-grid" id="pipelineContainer">
+                    <!-- Dynamic Pipeline Kanban Stages -->
+                </div>
+            </div>
+
+            <!-- Tab: Discovery & Seed Manager -->
+            <div class="tab-content" id="tabDiscovery">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-compass text-accent"></i> Seed Discovery & Matrix Control</h3>
+                        </div>
+                        <div style="padding:24px;">
+                            <p style="color:var(--text-secondary); margin-bottom:16px;">The Live Discovery Engine dynamically generates queries across 30 countries, 25 IT industries, and 100+ global tech cities (>2,250,000 queries total).</p>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                <button class="btn btn-primary" id="btnTriggerAutoSeeds"><i class="fa-solid fa-wand-magic-sparkles"></i> Synthesize 25+ Seed Target URLs Now</button>
+                                <button class="btn btn-secondary" id="btnResetExecutedQueries"><i class="fa-solid fa-rotate"></i> Reset Executed Query Matrix Table</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Direct B2B Domain Batch Uploader</h3>
+                        </div>
+                        <div style="padding:24px;">
+                            <div class="form-group" style="margin-bottom:16px;">
+                                <label>Target Company Domains (One per line)</label>
+                                <textarea id="customSeedDomains" rows="6" placeholder="e.g.&#10;apexsystems.com&#10;blueskytech.co.uk&#10;nexuslabs.io"></textarea>
+                            </div>
+                            <button class="btn btn-secondary" id="btnEnqueueCustomSeeds"><i class="fa-solid fa-plus"></i> Enqueue Seed Batch to Crawler Queue</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab: Decision Makers Intelligence -->
             <div class="tab-content" id="tabPeople">
                 <div class="filter-bar card">
@@ -258,19 +314,24 @@
                                 <input type="text" id="campaignSubject" value="Question regarding {{Company}} software roadmap" required>
                             </div>
                             <div class="form-group">
-                                <label>Email Body Template</label>
-                                <textarea id="campaignBody" rows="5" required>Hi {{First_Name}},
-
-I saw your role as {{Title}} at {{Company}}.
-
-We at AGB Technologies help engineering leaders scale dedicated software teams and cloud infrastructure seamlessly.
-
-Would you be open to a 10-minute chat this Thursday to discuss your technical priorities?
-
-Best regards,
-AGB Technologies Team</textarea>
+                                <label>Outgoing Sender Account (Trusted IMAP/SMTP)</label>
+                                <input type="text" value="support@agbtechnologies.com (smtp.hostinger.com:587)" readonly style="background:var(--bg-subtle); color:var(--text-secondary);">
                             </div>
-                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Launch Campaign</button>
+                            <div class="form-group">
+                                <label>Email Body Template (HTML / Plaintext)</label>
+                                <textarea id="campaignBody" rows="7" required><div style="font-family: Arial, sans-serif; font-size: 15px; color: #111827; line-height: 1.6;">
+    <p>Hi <strong>{{First_Name}}</strong>,</p>
+    <p>I saw your role as <em>{{Title}}</em> at <strong>{{Company}}</strong>.</p>
+    <p>We at <strong>AGB Technologies</strong> help engineering leaders scale dedicated software development teams and cloud infrastructure seamlessly.</p>
+    <p>Would you be open to a 10-minute chat this Thursday to discuss your technical priorities for this quarter?</p>
+    <br>
+    <p>Best regards,<br><strong>AGB Technologies Team</strong><br><a href="mailto:support@agbtechnologies.com">support@agbtechnologies.com</a></p>
+</div></textarea>
+                            </div>
+                            <div style="display:flex; gap:12px;">
+                                <button type="button" class="btn btn-secondary" id="btnPreviewHtml"><i class="fa-solid fa-code"></i> Live HTML Preview</button>
+                                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Launch Campaign via Hostinger SMTP</button>
+                            </div>
                         </form>
                     </div>
 
@@ -462,6 +523,21 @@ AGB Technologies Team</textarea>
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- HTML Email Live Preview Modal -->
+    <div class="modal-overlay" id="htmlPreviewModal">
+        <div class="modal-card" style="max-width: 720px; width: 90%;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-code text-accent"></i> Live HTML Email Template Preview</h3>
+                <button class="btn-close" id="btnCloseHtmlModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#F8F9FB; border:1px solid #E5E7EB; border-radius:12px; padding:20px;" id="htmlPreviewFrame">
+                    <!-- Dynamic Rendered HTML -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Lead Detail Drawer / Modal -->

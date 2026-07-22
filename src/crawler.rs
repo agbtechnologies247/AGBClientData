@@ -277,6 +277,7 @@ impl AntiBlockingCrawler {
                             priority_tier: "LOW".to_string(),
                             tech_stack,
                             contact_person: primary_contact_person,
+                            qualification_stage: "DISCOVERED".to_string(),
                             last_crawled: None,
                         };
 

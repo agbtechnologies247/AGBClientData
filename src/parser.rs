@@ -62,7 +62,12 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 4. Link Extraction (Contact, Team, Careers, LinkedIn, External Links)
+    // 0. Multi-Layer Advertisement & Tracker Cracking / Stripping
+    let clean_html_body = html_body
+        .replace(r"(?i)<script[^>]*googlesyndication[^>]*>.*?</script>", "")
+        .replace(r"(?i)<iframe[^>]*ads[^>]*>.*?</iframe>", "");
+
+    // 4. Link Extraction (Contact, Team, Careers, Verified LinkedIn, External Links)
     let link_selector = Selector::parse("a[href]").unwrap();
     let base_parsed = Url::parse(base_url).ok();
     let mut contact_url = None;
@@ -72,8 +77,10 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
 
     for element in document.select(&link_selector) {
         if let Some(href) = element.value().attr("href") {
-            if href.contains("linkedin.com/company") && linkedin_url.is_none() {
-                linkedin_url = Some(href.to_string());
+            // Only verified LinkedIn company or personal profile URLs
+            if (href.contains("linkedin.com/company/") || href.contains("linkedin.com/in/")) && !href.contains("share") && linkedin_url.is_none() {
+                let clean_li = href.split('?').next().unwrap_or(href).to_string();
+                linkedin_url = Some(clean_li);
             }
 
             if let Some(ref base) = base_parsed {

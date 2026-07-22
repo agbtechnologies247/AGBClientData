@@ -45,9 +45,9 @@ jobs:
       - name: Execute Remote SSH Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.VPS_HOST || '82.29.164.106' }}
+          username: ${{ secrets.VPS_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/marketing-data-crawler
             git fetch origin main

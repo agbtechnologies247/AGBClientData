@@ -52,6 +52,7 @@ impl Database {
                 priority_tier TEXT NOT NULL DEFAULT 'LOW',
                 tech_stack TEXT NOT NULL DEFAULT '[]',
                 contact_person TEXT,
+                qualification_stage TEXT NOT NULL DEFAULT 'DISCOVERED',
                 last_crawled TEXT
             );
 
@@ -166,6 +167,7 @@ impl Database {
         )?;
 
         let _ = conn.execute("ALTER TABLE companies ADD COLUMN contact_person TEXT", []);
+        let _ = conn.execute("ALTER TABLE companies ADD COLUMN qualification_stage TEXT NOT NULL DEFAULT 'DISCOVERED'", []);
 
         Ok(())
     }
@@ -428,7 +430,7 @@ impl Database {
     pub fn get_leads(&self, filter: &LeadFilter) -> Result<(Vec<Company>, usize)> {
         let conn = self.conn.lock().unwrap();
 
-        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, last_crawled FROM companies WHERE 1=1");
+        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, qualification_stage, last_crawled FROM companies WHERE 1=1");
         let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if let Some(min) = filter.min_score {
@@ -465,7 +467,8 @@ impl Database {
         if let Some(ref q) = filter.search_query {
             if !q.trim().is_empty() {
                 let pattern = format!("%{}%", q.trim());
-                query.push_str(" AND (name LIKE ? OR domain LIKE ? OR industry LIKE ? OR tech_stack LIKE ? OR contact_person LIKE ?)");
+                query.push_str(" AND (name LIKE ? OR domain LIKE ? OR industry LIKE ? OR tech_stack LIKE ? OR contact_person LIKE ? OR qualification_stage LIKE ?)");
+                params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
@@ -489,6 +492,7 @@ impl Database {
         let company_iter = stmt.query_map(params_refs.as_slice(), |row| {
             let tech_stack_str: String = row.get(17)?;
             let tech_stack: Vec<String> = serde_json::from_str(&tech_stack_str).unwrap_or_default();
+            let stage: String = row.get::<_, Option<String>>(19)?.unwrap_or_else(|| "DISCOVERED".to_string());
             Ok(Company {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -509,7 +513,8 @@ impl Database {
                 priority_tier: row.get(16)?,
                 tech_stack,
                 contact_person: row.get(18)?,
-                last_crawled: row.get(19)?,
+                qualification_stage: stage,
+                last_crawled: row.get(20)?,
             })
         })?;
 
@@ -524,11 +529,12 @@ impl Database {
     pub fn save_company(&self, c: &Company) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let tech_stack_json = serde_json::to_string(&c.tech_stack).unwrap_or_default();
+        let stage = if c.qualification_stage.is_empty() { "DISCOVERED" } else { &c.qualification_stage };
         let now = Utc::now().to_rfc3339();
 
         conn.execute(
-            "INSERT INTO companies (name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, last_crawled)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
+            "INSERT INTO companies (name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, qualification_stage, last_crawled)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
              ON CONFLICT(domain) DO UPDATE SET
                 name=excluded.name, website=excluded.website, country=excluded.country, city=excluded.city,
                 industry=excluded.industry, email=COALESCE(excluded.email, companies.email),
@@ -537,14 +543,22 @@ impl Database {
                 engineering_jobs=excluded.engineering_jobs, remote_jobs=excluded.remote_jobs,
                 outsourcing_keywords=excluded.outsourcing_keywords, lead_score=excluded.lead_score,
                 priority_tier=excluded.priority_tier, tech_stack=excluded.tech_stack,
-                contact_person=COALESCE(excluded.contact_person, companies.contact_person), last_crawled=excluded.last_crawled",
+                contact_person=COALESCE(excluded.contact_person, companies.contact_person),
+                qualification_stage=COALESCE(companies.qualification_stage, excluded.qualification_stage),
+                last_crawled=excluded.last_crawled",
             params![
                 c.name, c.domain, c.website, c.country, c.city, c.industry, c.email, c.phone,
                 c.contact_url, c.linkedin_url, c.hiring as i32, c.engineering_jobs, c.remote_jobs,
-                c.outsourcing_keywords, c.lead_score, c.priority_tier, tech_stack_json, c.contact_person, now
+                c.outsourcing_keywords, c.lead_score, c.priority_tier, tech_stack_json, c.contact_person, stage, now
             ],
         )?;
 
+        Ok(())
+    }
+
+    pub fn update_company_qualification_stage(&self, id: i64, stage: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("UPDATE companies SET qualification_stage = ?1 WHERE id = ?2", params![stage, id])?;
         Ok(())
     }
 
