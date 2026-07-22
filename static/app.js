@@ -99,28 +99,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch('/api/stats');
             const data = await res.json();
 
-            document.getElementById('statTotalLeads').innerText = data.total_companies.toLocaleString();
-            document.getElementById('statHighIntent').innerText = data.high_intent_leads.toLocaleString();
-            document.getElementById('statHiring').innerText = data.hiring_companies.toLocaleString();
-            document.getElementById('statTotalPeople').innerText = (data.total_decision_makers || 5).toLocaleString();
-            document.getElementById('statTotalInvestors').innerText = (data.total_investors || 5).toLocaleString();
+            const setTxt = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
+
+            setTxt('statTotalLeads', data.total_companies.toLocaleString());
+            setTxt('statHighIntent', data.high_intent_leads.toLocaleString());
+            setTxt('statHiring', data.hiring_companies.toLocaleString());
+            setTxt('statTotalPeople', (data.total_decision_makers || 0).toLocaleString());
+            setTxt('statTotalInvestors', (data.total_investors || 0).toLocaleString());
 
             const statusText = document.getElementById('crawlerStatusText');
             const statusInd = document.getElementById('statusIndicator');
             const btnToggle = document.getElementById('btnToggleCrawler');
 
             if (data.crawler_status === 'RUNNING') {
-                statusText.innerText = `RUNNING (${data.current_domain || 'Continuous Loop'})`;
-                statusText.style.color = '#34d399';
-                statusInd.className = 'status-indicator online';
-                btnToggle.innerHTML = '<i class="fa-solid fa-stop"></i> Pause Crawler Daemon';
-                btnToggle.className = 'btn btn-secondary';
+                if (statusText) {
+                    statusText.innerText = `RUNNING (${data.current_domain || 'Continuous Loop'})`;
+                    statusText.style.color = '#34d399';
+                }
+                if (statusInd) statusInd.className = 'status-indicator online';
+                if (btnToggle) {
+                    btnToggle.innerHTML = '<i class="fa-solid fa-stop"></i> Pause Crawler Daemon';
+                    btnToggle.className = 'btn btn-secondary';
+                }
             } else {
-                statusText.innerText = 'IDLE';
-                statusText.style.color = '#94a3b8';
-                statusInd.className = 'status-indicator';
-                btnToggle.innerHTML = '<i class="fa-solid fa-play"></i> Start Crawler Daemon';
-                btnToggle.className = 'btn btn-secondary';
+                if (statusText) {
+                    statusText.innerText = 'IDLE';
+                    statusText.style.color = '#94a3b8';
+                }
+                if (statusInd) statusInd.className = 'status-indicator';
+                if (btnToggle) {
+                    btnToggle.innerHTML = '<i class="fa-solid fa-play"></i> Start Crawler Daemon';
+                    btnToggle.className = 'btn btn-secondary';
+                }
             }
         } catch (err) {
             console.error("Error loading stats:", err);
