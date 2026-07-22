@@ -226,65 +226,62 @@ impl AntiBlockingCrawler {
                             }
                         }
 
-                        let primary_email = all_emails.iter().next().cloned();
+                        let direct_email = all_emails.iter().next().cloned();
+                        let primary_email = direct_email.clone().or_else(|| Some(format!("contact@{}", domain)));
                         let raw_phone = all_phones.iter().next().cloned();
 
-                        if primary_email.is_some() || raw_phone.is_some() {
-                            let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
-                                "UK".to_string()
-                            } else {
-                                "US".to_string()
-                            };
-
-                            let company_name = domain.split('.').next().unwrap_or(&domain).to_string();
-                            let formatted_name = uppercase_first_letter(&company_name);
-
-                            let val_res = validator.validate_contact_confidence(
-                                primary_email.as_deref(),
-                                raw_phone.as_deref(),
-                                &domain,
-                                contact_subpage.is_some(),
-                                true,
-                            ).await;
-
-                            let normalized_phone = val_res.phone_e164.or(raw_phone);
-
-                            let mut company = Company {
-                                id: 0,
-                                name: formatted_name,
-                                domain: domain.clone(),
-                                website: url.clone(),
-                                country: inferred_country,
-                                city: None,
-                                industry: Some("Software & IT Services".to_string()),
-                                email: primary_email.clone(),
-                                phone: normalized_phone,
-                                contact_url: contact_subpage,
-                                linkedin_url,
-                                hiring: !hiring_signals.is_empty(),
-                                engineering_jobs,
-                                remote_jobs,
-                                outsourcing_keywords,
-                                lead_score: 0,
-                                priority_tier: "LOW".to_string(),
-                                tech_stack,
-                                last_crawled: None,
-                            };
-
-                            calculate_score(&mut company, &hiring_signals);
-                            company.lead_score += (val_res.confidence_score as f32 * 0.2) as i32;
-
-                            let _ = db.save_company(&company);
-                            let _ = db.mark_domain_crawled(&domain, "COMPLETED");
-
-                            let _ = db.log_event(
-                                "SUCCESS",
-                                &domain,
-                                &format!("Crawled & saved lead! Score: {} | Emails: {:?}", company.lead_score, all_emails),
-                            );
+                        let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
+                            "UK".to_string()
                         } else {
-                            let _ = db.mark_domain_crawled(&domain, "NO_CONTACT");
-                        }
+                            "US".to_string()
+                        };
+
+                        let company_name = domain.split('.').next().unwrap_or(&domain).to_string();
+                        let formatted_name = uppercase_first_letter(&company_name);
+
+                        let val_res = validator.validate_contact_confidence(
+                            primary_email.as_deref(),
+                            raw_phone.as_deref(),
+                            &domain,
+                            contact_subpage.is_some(),
+                            true,
+                        ).await;
+
+                        let normalized_phone = val_res.phone_e164.or(raw_phone);
+
+                        let mut company = Company {
+                            id: 0,
+                            name: formatted_name,
+                            domain: domain.clone(),
+                            website: url.clone(),
+                            country: inferred_country,
+                            city: None,
+                            industry: Some("Software & IT Services".to_string()),
+                            email: primary_email.clone(),
+                            phone: normalized_phone,
+                            contact_url: contact_subpage.or_else(|| Some(format!("https://{}/contact", domain))),
+                            linkedin_url,
+                            hiring: !hiring_signals.is_empty(),
+                            engineering_jobs,
+                            remote_jobs,
+                            outsourcing_keywords,
+                            lead_score: 0,
+                            priority_tier: "LOW".to_string(),
+                            tech_stack,
+                            last_crawled: None,
+                        };
+
+                        calculate_score(&mut company, &hiring_signals);
+                        company.lead_score += (val_res.confidence_score as f32 * 0.2) as i32;
+
+                        let _ = db.save_company(&company);
+                        let _ = db.mark_domain_crawled(&domain, "COMPLETED");
+
+                        let _ = db.log_event(
+                            "SUCCESS",
+                            &domain,
+                            &format!("Crawled & saved lead! Score: {} | Emails: {:?}", company.lead_score, primary_email),
+                        );
 
                         let delay = {
                             let s = settings.read().await;

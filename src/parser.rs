@@ -42,12 +42,12 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 3. Expanded Phone Extraction (US & UK phone formats, tel: links)
+    // 3. Expanded Phone Extraction (US, UK, and International phone formats, tel: links)
     let mut phones_set = HashSet::new();
-    let phone_regex = Regex::new(r"(\+\d{1,3}[\s-]?)?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{4}").unwrap();
+    let phone_regex = Regex::new(r"(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}").unwrap();
     for mat in phone_regex.find_iter(html_body) {
         let phone = mat.as_str().trim().to_string();
-        if phone.len() >= 10 {
+        if phone.len() >= 9 && !phone.contains('@') {
             phones_set.insert(phone);
         }
     }

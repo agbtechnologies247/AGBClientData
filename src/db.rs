@@ -393,10 +393,10 @@ impl Database {
     pub fn get_stats(&self) -> Result<CrawlerStats> {
         let conn = self.conn.lock().unwrap();
 
-        let total_companies: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE (email IS NOT NULL AND email != '') OR (phone IS NOT NULL AND phone != '')", [], |r| r.get(0))?;
-        let high_intent_leads: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE priority_tier = 'HIGH' AND ((email IS NOT NULL AND email != '') OR (phone IS NOT NULL AND phone != ''))", [], |r| r.get(0))?;
-        let medium_intent_leads: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE priority_tier = 'MEDIUM' AND ((email IS NOT NULL AND email != '') OR (phone IS NOT NULL AND phone != ''))", [], |r| r.get(0))?;
-        let hiring_companies: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE hiring = 1 AND ((email IS NOT NULL AND email != '') OR (phone IS NOT NULL AND phone != ''))", [], |r| r.get(0))?;
+        let total_companies: usize = conn.query_row("SELECT COUNT(*) FROM companies", [], |r| r.get(0))?;
+        let high_intent_leads: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE priority_tier = 'HIGH'", [], |r| r.get(0))?;
+        let medium_intent_leads: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE priority_tier = 'MEDIUM'", [], |r| r.get(0))?;
+        let hiring_companies: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE hiring = 1", [], |r| r.get(0))?;
         let leads_with_email: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE email IS NOT NULL AND email != ''", [], |r| r.get(0))?;
         let leads_with_phone: usize = conn.query_row("SELECT COUNT(*) FROM companies WHERE phone IS NOT NULL AND phone != ''", [], |r| r.get(0))?;
         let total_decision_makers: usize = conn.query_row("SELECT COUNT(*) FROM people", [], |r| r.get(0))?;
@@ -425,7 +425,7 @@ impl Database {
     pub fn get_leads(&self, filter: &LeadFilter) -> Result<(Vec<Company>, usize)> {
         let conn = self.conn.lock().unwrap();
 
-        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, last_crawled FROM companies WHERE ((email IS NOT NULL AND email != '') OR (phone IS NOT NULL AND phone != ''))");
+        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, last_crawled FROM companies WHERE 1=1");
         let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if let Some(min) = filter.min_score {
