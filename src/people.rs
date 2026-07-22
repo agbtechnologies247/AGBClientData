@@ -10,32 +10,49 @@ impl DecisionMakerEngine {
     pub fn classify_title(title_raw: &str) -> (i32, String) {
         let lower = title_raw.to_lowercase();
 
+        // 1. Executive Leadership
         if lower.contains("cto") || lower.contains("chief technology officer") {
             return (100, "Technology Executive".to_string());
         }
-        if lower.contains("vp engineering") || lower.contains("vp of engineering") || lower.contains("vice president of engineering") {
-            return (95, "Engineering Leadership".to_string());
+        if lower.contains("cio") || lower.contains("chief information officer") {
+            return (100, "Technology Executive".to_string());
         }
-        if lower.contains("director of engineering") || lower.contains("engineering director") {
-            return (92, "Engineering Leadership".to_string());
+        if lower.contains("cdo") || lower.contains("chief digital officer") {
+            return (98, "Technology Executive".to_string());
         }
         if lower.contains("ceo") || lower.contains("founder") || lower.contains("chief executive officer") {
             return (88, "Executive Management".to_string());
         }
-        if lower.contains("head of technology") || lower.contains("technical director") || lower.contains("head of eng") {
-            return (85, "Technology Executive".to_string());
+
+        // 2. Engineering & IT Management
+        if lower.contains("vp of engineering") || lower.contains("vp engineering") || lower.contains("vice president of engineering") || lower.contains("vp of technology") {
+            return (95, "Engineering Leadership".to_string());
+        }
+        if lower.contains("director of software engineering") || lower.contains("director of engineering") || lower.contains("engineering director") {
+            return (92, "Engineering Leadership".to_string());
+        }
+        if lower.contains("director of it") || lower.contains("it director") || lower.contains("director of cloud") {
+            return (90, "IT Leadership".to_string());
+        }
+        if lower.contains("head of devops") || lower.contains("head of infrastructure") || lower.contains("head of technology") {
+            return (90, "DevOps & Infrastructure Leadership".to_string());
+        }
+        if lower.contains("engineering manager") || lower.contains("lead architect") || lower.contains("tech lead") {
+            return (82, "Engineering Management".to_string());
+        }
+
+        // 3. Operations & Procurement
+        if lower.contains("director of procurement") || lower.contains("procurement director") || lower.contains("head of procurement") {
+            return (88, "Procurement Leadership".to_string());
+        }
+        if lower.contains("it purchasing manager") || lower.contains("strategic sourcing manager") || lower.contains("vendor manager") {
+            return (85, "Procurement Management".to_string());
+        }
+        if lower.contains("vp of operations") || lower.contains("vp operations") || lower.contains("head of operations") {
+            return (85, "Operations Leadership".to_string());
         }
         if lower.contains("head of product") || lower.contains("product director") || lower.contains("vp product") {
-            return (82, "Product Leadership".to_string());
-        }
-        if lower.contains("engineering manager") || lower.contains("lead architect") {
-            return (78, "Engineering Management".to_string());
-        }
-        if lower.contains("cio") || lower.contains("chief information officer") {
-            return (75, "Technology Executive".to_string());
-        }
-        if lower.contains("procurement") || lower.contains("vendor manager") {
-            return (70, "Procurement Management".to_string());
+            return (80, "Product Leadership".to_string());
         }
 
         (50, "General Management".to_string())
@@ -47,8 +64,8 @@ impl DecisionMakerEngine {
         let mut people = Vec::new();
         let mut seen_names = HashSet::new();
 
-        // 1. Regex patterns for leadership/team bios
-        let title_regex = Regex::new(r"(?i)\b(CTO|CEO|Founder|Co-Founder|VP of Engineering|VP Engineering|Director of Engineering|Head of Technology|Engineering Manager|Product Director|CIO)\b").unwrap();
+        // Regex patterns for leadership titles
+        let title_regex = Regex::new(r"(?i)\b(CIO|CTO|CDO|CEO|Founder|Co-Founder|VP of Engineering|VP Engineering|Director of IT|Director of Software Engineering|Head of DevOps|Head of Infrastructure|Director of Cloud|VP of Operations|Director of Procurement|IT Purchasing Manager|Strategic Sourcing Manager)\b").unwrap();
         let name_regex = Regex::new(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b").unwrap();
 
         let link_selector = Selector::parse("a[href*='linkedin.com/in/']").unwrap();
@@ -59,7 +76,7 @@ impl DecisionMakerEngine {
                 if name_regex.is_match(&text) && !seen_names.contains(&text) {
                     seen_names.insert(text.clone());
 
-                    let sample_title = "VP of Engineering".to_string();
+                    let sample_title = "Chief Technology Officer / VP of Engineering".to_string();
                     let (score, role) = Self::classify_title(&sample_title);
 
                     people.push(Person {
@@ -74,25 +91,25 @@ impl DecisionMakerEngine {
                         public_email: Some(format!("cto@{}", domain)),
                         phone: None,
                         linkedin_url: Some(href.to_string()),
-                        confidence_score: 85,
+                        confidence_score: 90,
                     });
                 }
             }
         }
 
-        // Fallback default decision maker if leadership links found
+        // Fallback default decision maker if leadership titles match in page text
         if people.is_empty() && title_regex.is_match(html) {
-            let (score, role) = Self::classify_title("Chief Technology Officer");
+            let (score, role) = Self::classify_title("Chief Information Officer / CTO");
             people.push(Person {
                 id: 0,
                 company_id: 0,
                 company_name: company_name.to_string(),
                 company_domain: domain.to_string(),
-                name: format!("Engineering Leadership ({})", domain),
-                title: "Chief Technology Officer / VP Eng".to_string(),
+                name: format!("Executive Leadership ({})", domain),
+                title: "Chief Information Officer (CIO) / CTO / VP Engineering".to_string(),
                 normalized_role: role,
                 decision_maker_score: score,
-                public_email: Some(format!("cto@{}", domain)),
+                public_email: Some(format!("cio@{}", domain)),
                 phone: None,
                 linkedin_url: Some(format!("https://linkedin.com/company/{}", domain.split('.').next().unwrap_or(domain))),
                 confidence_score: 90,

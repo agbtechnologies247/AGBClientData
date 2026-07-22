@@ -55,6 +55,28 @@ impl Default for DiscoveryStrategy {
                 "cloud migration services".to_string(),
                 "UI UX design agency".to_string(),
                 "IoT software solutions".to_string(),
+                // Corporate Tool Searching & Procurement Keywords
+                "Enterprise software procurement".to_string(),
+                "SaaS vendor evaluation".to_string(),
+                "IT tool consolidation platforms".to_string(),
+                "Technology stack optimization".to_string(),
+                // Budgeting & Finance
+                "Software ROI calculator".to_string(),
+                "IT budget allocation software".to_string(),
+                "Software license management".to_string(),
+                // Scale Keywords
+                "Enterprise companies IT".to_string(),
+                "Fortune 500 tech stack".to_string(),
+                "Mid-market IT solutions".to_string(),
+                "High-growth startups software".to_string(),
+                // Targeted Titles & Tech Stack Keywords
+                "CTO Salesforce".to_string(),
+                "CIO AWS GCP Azure".to_string(),
+                "Director of Engineering AWS".to_string(),
+                "VP of Engineering Kubernetes".to_string(),
+                "Head of DevOps Terraform".to_string(),
+                "Director of Procurement IT".to_string(),
+                "Strategic Sourcing Manager SaaS".to_string(),
             ],
             cities: vec![
                 // US Major Tech Hubs
