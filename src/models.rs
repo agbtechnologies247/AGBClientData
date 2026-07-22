@@ -175,8 +175,9 @@ pub struct AddProxyRequest {
     pub proxies: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CrawlSeedRequest {
+    #[serde(default)]
     pub seed_urls: Vec<String>,
     pub keywords: Option<Vec<String>>,
     pub countries: Option<Vec<String>>,

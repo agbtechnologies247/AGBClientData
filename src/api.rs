@@ -236,14 +236,15 @@ async fn match_investors_handler(
 
 async fn start_crawler_handler(
     State(state): State<AppState>,
-    Json(payload): Json<CrawlSeedRequest>,
+    payload: Option<Json<CrawlSeedRequest>>,
 ) -> Response {
-    let mut seeds = payload.seed_urls;
+    let req = payload.map(|p| p.0).unwrap_or_default();
+    let mut seeds = req.seed_urls;
     if seeds.is_empty() {
         seeds = state.discovery.discover_live_seeds(None).await;
     }
 
-    state.crawler.start_crawl(seeds.clone(), payload.mode).await;
+    state.crawler.start_crawl(seeds.clone(), req.mode).await;
     (
         StatusCode::OK,
         Json(json!({
