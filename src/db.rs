@@ -53,6 +53,8 @@ impl Database {
                 tech_stack TEXT NOT NULL DEFAULT '[]',
                 contact_person TEXT,
                 last_crawled TEXT
+            );
+
             CREATE INDEX IF NOT EXISTS idx_companies_score ON companies(lead_score DESC);
             CREATE INDEX IF NOT EXISTS idx_companies_country ON companies(country);
             CREATE INDEX IF NOT EXISTS idx_companies_priority ON companies(priority_tier);
@@ -162,6 +164,8 @@ impl Database {
             );
             ",
         )?;
+
+        let _ = conn.execute("ALTER TABLE companies ADD COLUMN contact_person TEXT", []);
 
         Ok(())
     }
