@@ -251,6 +251,36 @@ impl AutoSeedDiscovery {
             }
         }
 
+        // Fallback 3: Infinite Dynamic B2B Seed Generator if count is still low
+        if discovered_seeds.len() < 10 {
+            let prefixes = vec![
+                "apex", "vanguard", "nexus", "horizon", "beacon", "crest", "summit", "matrix",
+                "omni", "pinnacle", "vertex", "zenith", "quantum", "strata", "synergy", "optima",
+                "velocity", "infinitum", "vector", "cyber", "cloud", "data", "tech", "logic",
+                "soft", "sys", "digital", "labs", "studio", "networks", "interactive", "solutions",
+                "blue", "red", "green", "silver", "gold", "iron", "steel", "titan", "phoenix",
+            ];
+            let suffixes = vec![
+                "tech", "software", "solutions", "labs", "digital", "systems", "consulting",
+                "group", "partners", "networks", "logic", "cloud", "ai", "dev", "ops",
+            ];
+            let tlds = vec!["com", "co.uk", "io", "tech", "dev", "ai"];
+
+            for p in &prefixes {
+                if discovered_seeds.len() >= 25 { break; }
+                for s in &suffixes {
+                    if discovered_seeds.len() >= 25 { break; }
+                    for tld in &tlds {
+                        let dom = format!("{}{}.{}", p, s, tld);
+                        if self.is_valid_company_domain(&dom) && !self.db.is_domain_crawled(&dom).unwrap_or(false) {
+                            discovered_seeds.insert(format!("https://{}", dom));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         let seed_list: Vec<String> = discovered_seeds.into_iter().collect();
         let _ = self.db.log_event(
             "SUCCESS",
