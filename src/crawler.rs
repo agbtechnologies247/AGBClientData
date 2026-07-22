@@ -226,8 +226,7 @@ impl AntiBlockingCrawler {
                             }
                         }
 
-                        let direct_email = all_emails.iter().next().cloned();
-                        let primary_email = direct_email.clone().or_else(|| Some(format!("contact@{}", domain)));
+                        let primary_email = all_emails.iter().next().cloned();
                         let raw_phone = all_phones.iter().next().cloned();
 
                         let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
@@ -247,7 +246,7 @@ impl AntiBlockingCrawler {
                             true,
                         ).await;
 
-                        let normalized_phone = val_res.phone_e164.or(raw_phone).or_else(|| Some("+1 (800) 247-9247".to_string()));
+                        let normalized_phone = val_res.phone_e164.or(raw_phone);
 
                         let (person_name, person_pos) = if !extracted_people.is_empty() {
                             (Some(extracted_people[0].name.clone()), Some(extracted_people[0].title.clone()))
@@ -283,9 +282,9 @@ impl AntiBlockingCrawler {
                         calculate_score(&mut company, &hiring_signals);
                         company.lead_score += (val_res.confidence_score as f32 * 0.2) as i32;
 
-                        // STRICT RULE: Only write contact if BOTH email AND phone number are present! Else ignore!
-                        if company.email.is_some() && !company.email.as_ref().unwrap().is_empty() 
-                            && company.phone.is_some() && !company.phone.as_ref().unwrap().is_empty() {
+                        let has_email = company.email.as_ref().map_or(false, |e| !e.trim().is_empty());
+                        let has_phone = company.phone.as_ref().map_or(false, |p| !p.trim().is_empty());
+                        if has_email || has_phone {
                             let _ = db.save_company(&company);
                         }
                         let _ = db.mark_domain_crawled(&domain, "COMPLETED");

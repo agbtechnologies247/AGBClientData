@@ -176,12 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const personName = c.contact_person || 'Alex Rivera';
                 const personPos = c.contact_position || 'Chief Technology Officer (CTO)';
 
-                const displayPhone = c.phone || '+1 (800) 247-9247';
-                const emailStr = c.email ? `<span style="color:#047857; font-weight:500;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted);">-</span>';
-                const phoneStr = `<br><span class="badge badge-ring-verified"><i class="fa-solid fa-phone"></i> ${displayPhone} [Ring Verified ✓]</span>`;
+                const emailStr = c.email ? `<span style="color:#047857; font-weight:500;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted); font-size:12px;">No Email Listed</span>';
+                const phoneStr = (c.phone && c.phone.trim().length > 0)
+                    ? `<br><span class="badge badge-ring-verified"><i class="fa-solid fa-phone"></i> ${c.phone} [Ring Verified ✓]</span>`
+                    : '<br><span style="color:var(--text-muted); font-size:12px;"><i class="fa-solid fa-phone-slash"></i> No Direct Phone Listed</span>';
                 
                 const copyEmailBtn = c.email ? `<button class="btn-copy" onclick="copyToClipboard('${c.email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
-                const copyPhoneBtn = `<button class="btn-copy" onclick="copyToClipboard('${displayPhone}', 'Phone')"><i class="fa-solid fa-copy"></i> Phone</button>`;
+                const copyPhoneBtn = (c.phone && c.phone.trim().length > 0) ? `<button class="btn-copy" onclick="copyToClipboard('${c.phone}', 'Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 const hiringBadge = c.hiring ? `<span class="badge badge-high"><i class="fa-solid fa-user-plus"></i> Hiring (${c.engineering_jobs} Jobs)</span>` : '<span class="badge badge-low">No</span>';
                 const techBadges = (c.tech_stack || []).map(t => `<span class="badge" style="background:var(--accent-light); color:var(--accent); font-size:11px; margin-right:4px;">${t}</span>`).join('');

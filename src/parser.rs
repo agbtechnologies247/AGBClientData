@@ -42,23 +42,28 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 3. Expanded Phone Extraction (US, UK, and International phone formats, tel: links)
+    // 3. Expanded Real Phone Extraction
     let mut phones_set = HashSet::new();
-    let phone_regex = Regex::new(r"(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}").unwrap();
-    for mat in phone_regex.find_iter(html_body) {
-        let phone = mat.as_str().trim().to_string();
-        if phone.len() >= 9 && !phone.contains('@') {
-            phones_set.insert(phone);
-        }
-    }
-
+    
+    // Extract from tel: links first
     let tel_selector = Selector::parse("a[href^='tel:']").unwrap();
     for element in document.select(&tel_selector) {
         if let Some(href) = element.value().attr("href") {
-            let phone_raw = href.trim_start_matches("tel:").trim().to_string();
+            let phone_raw = href.trim_start_matches("tel:").split('?').next().unwrap_or("").trim().to_string();
             if phone_raw.len() >= 7 {
                 phones_set.insert(phone_raw);
             }
+        }
+    }
+
+    // Extract text content only (avoid HTML tags, scripts, CSS attributes)
+    let body_text = document.root_element().text().collect::<Vec<_>>().join(" ");
+    let phone_regex = Regex::new(r"(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}").unwrap();
+    for mat in phone_regex.find_iter(&body_text) {
+        let raw = mat.as_str().trim();
+        let digit_count = raw.chars().filter(|c| c.is_ascii_digit()).count();
+        if digit_count >= 7 && digit_count <= 15 && !raw.contains("2026") && !raw.contains("2025") && !raw.contains("1920") {
+            phones_set.insert(raw.to_string());
         }
     }
 
