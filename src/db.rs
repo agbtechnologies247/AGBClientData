@@ -885,5 +885,16 @@ impl Database {
 
         Ok(urls)
     }
+
+    pub fn clear_all_data(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let _ = conn.execute("DELETE FROM companies", []);
+        let _ = conn.execute("DELETE FROM people", []);
+        let _ = conn.execute("DELETE FROM crawled_domains", []);
+        let _ = conn.execute("DELETE FROM search_queries", []);
+        let _ = conn.execute("DELETE FROM crawl_queue", []);
+        let _ = conn.execute("DELETE FROM crawl_logs", []);
+        Ok(())
+    }
 }
 

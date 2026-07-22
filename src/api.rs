@@ -40,6 +40,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/crawler/stop", post(stop_crawler_handler))
         .route("/api/crawler/auto-seeds", post(auto_discover_seeds_handler))
         .route("/api/crawler/reset-queries", post(reset_queries_handler))
+        .route("/api/crawler/clear-database", post(clear_database_handler))
         .route("/api/proxies", get(get_proxies_handler).post(add_proxies_handler))
         .route("/api/logs", get(get_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
@@ -411,5 +412,13 @@ async fn export_investors_handler(
             Json(json!({"error": e.to_string()})),
         )
             .into_response(),
+    }
+}
+
+async fn clear_database_handler(State(state): State<AppState>) -> Response {
+    state.crawler.stop();
+    match state.db.clear_all_data() {
+        Ok(_) => (StatusCode::OK, Json(json!({"status": "success", "message": "Database wiped successfully. Ready for fresh crawl."}))).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
     }
 }

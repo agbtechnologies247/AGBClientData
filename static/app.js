@@ -797,6 +797,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Clear Database & Restart Fresh Crawl
+    const btnClearDatabaseBtn = document.getElementById('btnClearDatabaseBtn');
+    if (btnClearDatabaseBtn) {
+        btnClearDatabaseBtn.addEventListener('click', async () => {
+            if (!confirm("Are you sure you want to clear all existing crawled leads and restart a fresh crawl with 7-layer phone guardrails?")) {
+                return;
+            }
+            try {
+                const res = await fetch('/api/crawler/clear-database', { method: 'POST' });
+                if (res.ok) {
+                    showToast("Database wiped cleanly. Restarting fresh seed discovery...");
+                    await fetch('/api/crawler/auto-seeds', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+                    await fetch('/api/crawler/start', { method: 'POST' });
+                    loadStats();
+                    loadLeads();
+                    loadPipeline();
+                }
+            } catch (err) {
+                console.error("Error clearing database:", err);
+            }
+        });
+    }
+
     // Custom Seed Batch Enqueueing
     const btnEnqueueCustomSeeds = document.getElementById('btnEnqueueCustomSeeds');
     if (btnEnqueueCustomSeeds) {
