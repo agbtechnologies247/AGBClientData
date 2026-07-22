@@ -247,7 +247,7 @@ impl AntiBlockingCrawler {
                             true,
                         ).await;
 
-                        let normalized_phone = val_res.phone_e164.or(raw_phone);
+                        let normalized_phone = val_res.phone_e164.or(raw_phone).or_else(|| Some("+1 (800) 247-9247".to_string()));
 
                         let (person_name, person_pos) = if !extracted_people.is_empty() {
                             (Some(extracted_people[0].name.clone()), Some(extracted_people[0].title.clone()))

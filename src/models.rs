@@ -47,6 +47,9 @@ pub struct Person {
     pub confidence_score: i32,
 }
 
+fn default_page() -> usize { 1 }
+fn default_limit() -> usize { 25 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonFilter {
     pub min_score: Option<i32>,
@@ -54,7 +57,9 @@ pub struct PersonFilter {
     pub domain: Option<String>,
     pub has_email: Option<bool>,
     pub search_query: Option<String>,
+    #[serde(default = "default_page")]
     pub page: usize,
+    #[serde(default = "default_limit")]
     pub limit: usize,
 }
 
@@ -87,7 +92,9 @@ pub struct LeadFilter {
     pub has_email: Option<bool>,
     pub search_query: Option<String>,
     pub priority: Option<String>,
+    #[serde(default = "default_page")]
     pub page: usize,
+    #[serde(default = "default_limit")]
     pub limit: usize,
 }
 
@@ -100,7 +107,9 @@ pub struct InvestorFilter {
     pub stage: Option<String>,
     pub has_email: Option<bool>,
     pub search_query: Option<String>,
+    #[serde(default = "default_page")]
     pub page: usize,
+    #[serde(default = "default_limit")]
     pub limit: usize,
 }
 
