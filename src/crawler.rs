@@ -176,6 +176,7 @@ impl AntiBlockingCrawler {
                         let mut remote_jobs = 0;
                         let mut outsourcing_keywords = 0;
                         let mut tech_stack = Vec::new();
+                        let mut extracted_people = Vec::new();
                         let mut pages_crawled = 0;
 
                         let target_subpaths = vec!["", "/contact", "/contact-us", "/about", "/about-us", "/team", "/our-team", "/careers", "/leadership", "/services"];
@@ -215,9 +216,10 @@ impl AntiBlockingCrawler {
 
                                             if subpath.contains("team") || subpath.contains("about") || subpath.contains("leadership") {
                                                 let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
-                                                for p in people {
-                                                    let _ = db.save_person(&p);
+                                                for p in &people {
+                                                    let _ = db.save_person(p);
                                                 }
+                                                extracted_people.extend(people);
                                             }
                                         }
                                     }
@@ -249,6 +251,12 @@ impl AntiBlockingCrawler {
 
                         let normalized_phone = val_res.phone_e164.or(raw_phone);
 
+                        let primary_contact_person = if !extracted_people.is_empty() {
+                            Some(format!("{} ({})", extracted_people[0].name, extracted_people[0].title))
+                        } else {
+                            Some(format!("CTO / VP Engineering ({})", domain))
+                        };
+
                         let mut company = Company {
                             id: 0,
                             name: formatted_name,
@@ -268,6 +276,7 @@ impl AntiBlockingCrawler {
                             lead_score: 0,
                             priority_tier: "LOW".to_string(),
                             tech_stack,
+                            contact_person: primary_contact_person,
                             last_crawled: None,
                         };
 

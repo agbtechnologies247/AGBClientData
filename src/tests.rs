@@ -65,6 +65,7 @@ mod tests {
             lead_score: 0,
             priority_tier: "LOW".to_string(),
             tech_stack: vec!["React".to_string(), "Node.js".to_string()],
+            contact_person: Some("Alex Rivera (CTO)".to_string()),
             last_crawled: None,
         };
 

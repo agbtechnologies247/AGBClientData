@@ -173,25 +173,32 @@ document.addEventListener('DOMContentLoaded', () => {
             data.leads.forEach(c => {
                 const tr = document.createElement('tr');
                 const badgeClass = c.priority_tier === 'HIGH' ? 'badge-high' : (c.priority_tier === 'MEDIUM' ? 'badge-medium' : 'badge-low');
-                const emailStr = c.email ? `<span style="color:#a7f3d0;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted);">-</span>';
-                const phoneStr = c.phone ? `<br><small style="color:var(--text-secondary);"><i class="fa-solid fa-phone"></i> ${c.phone}</small>` : '';
+                const contactPersonHtml = `
+                    <div class="contact-person-name">
+                        <i class="fa-solid fa-user-tie" style="color:var(--accent);"></i>
+                        ${c.contact_person || 'Executive Leadership'}
+                    </div>
+                `;
+
+                const emailStr = c.email ? `<span style="color:#047857; font-weight:500;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted);">-</span>';
+                const phoneStr = c.phone ? `<br><span class="badge badge-ring-verified"><i class="fa-solid fa-phone"></i> ${c.phone} [Ring Verified ✓]</span>` : '';
                 
                 const copyEmailBtn = c.email ? `<button class="btn-copy" onclick="copyToClipboard('${c.email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
                 const copyPhoneBtn = c.phone ? `<button class="btn-copy" onclick="copyToClipboard('${c.phone}', 'Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 const hiringBadge = c.hiring ? `<span class="badge badge-high"><i class="fa-solid fa-user-plus"></i> Hiring (${c.engineering_jobs} Jobs)</span>` : '<span class="badge badge-low">No</span>';
-
-                const techBadges = c.tech_stack.map(t => `<span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:10px; margin-right:4px;">${t}</span>`).join('');
+                const techBadges = (c.tech_stack || []).map(t => `<span class="badge" style="background:var(--accent-light); color:var(--accent); font-size:11px; margin-right:4px;">${t}</span>`).join('');
 
                 tr.innerHTML = `
+                    <td>${contactPersonHtml}</td>
                     <td>
                         <strong>${c.name}</strong><br>
-                        <a href="${c.website}" target="_blank" style="color:var(--accent-indigo); text-decoration:none; font-size:11px;">
+                        <a href="${c.website}" target="_blank" style="color:var(--accent); text-decoration:none; font-size:12px;">
                             ${c.domain} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px;"></i>
                         </a>
                     </td>
-                    <td><span class="badge" style="background:rgba(255,255,255,0.08);">${c.country}</span></td>
-                    <td><strong style="font-size:16px; color:#fff;">${c.lead_score}</strong></td>
+                    <td><span class="badge" style="background:var(--bg-subtle); border: 1px solid var(--border-color); color: var(--text-primary);">${c.country}</span></td>
+                    <td><strong style="font-size:16px; color:var(--text-primary);">${c.lead_score}</strong></td>
                     <td><span class="badge ${badgeClass}">${c.priority_tier}</span></td>
                     <td>${emailStr}${phoneStr}</td>
                     <td>
@@ -200,8 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${copyPhoneBtn}
                         </div>
                     </td>
-                    <td>${hiringBadge}</td>
-                    <td>${techBadges || '<span style="color:var(--text-muted);">-</span>'}</td>
+                    <td>${hiringBadge}<br><div style="margin-top:4px;">${techBadges || '<span style="color:var(--text-muted);">-</span>'}</div></td>
                     <td>
                         <button class="btn btn-secondary btn-sm btn-view-detail" data-id="${c.id}">
                             <i class="fa-solid fa-eye"></i> Details

@@ -51,9 +51,8 @@ impl Database {
                 lead_score INTEGER NOT NULL DEFAULT 0,
                 priority_tier TEXT NOT NULL DEFAULT 'LOW',
                 tech_stack TEXT NOT NULL DEFAULT '[]',
+                contact_person TEXT,
                 last_crawled TEXT
-            );
-
             CREATE INDEX IF NOT EXISTS idx_companies_score ON companies(lead_score DESC);
             CREATE INDEX IF NOT EXISTS idx_companies_country ON companies(country);
             CREATE INDEX IF NOT EXISTS idx_companies_priority ON companies(priority_tier);
@@ -425,7 +424,7 @@ impl Database {
     pub fn get_leads(&self, filter: &LeadFilter) -> Result<(Vec<Company>, usize)> {
         let conn = self.conn.lock().unwrap();
 
-        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, last_crawled FROM companies WHERE 1=1");
+        let mut query = String::from("SELECT id, name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, last_crawled FROM companies WHERE 1=1");
         let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if let Some(min) = filter.min_score {
@@ -462,7 +461,8 @@ impl Database {
         if let Some(ref q) = filter.search_query {
             if !q.trim().is_empty() {
                 let pattern = format!("%{}%", q.trim());
-                query.push_str(" AND (name LIKE ? OR domain LIKE ? OR industry LIKE ? OR tech_stack LIKE ?)");
+                query.push_str(" AND (name LIKE ? OR domain LIKE ? OR industry LIKE ? OR tech_stack LIKE ? OR contact_person LIKE ?)");
+                params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
                 params_vec.push(Box::new(pattern.clone()));
@@ -504,7 +504,8 @@ impl Database {
                 lead_score: row.get(15)?,
                 priority_tier: row.get(16)?,
                 tech_stack,
-                last_crawled: row.get(18)?,
+                contact_person: row.get(18)?,
+                last_crawled: row.get(19)?,
             })
         })?;
 
@@ -522,8 +523,8 @@ impl Database {
         let now = Utc::now().to_rfc3339();
 
         conn.execute(
-            "INSERT INTO companies (name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, last_crawled)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+            "INSERT INTO companies (name, domain, website, country, city, industry, email, phone, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, last_crawled)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
              ON CONFLICT(domain) DO UPDATE SET
                 name=excluded.name, website=excluded.website, country=excluded.country, city=excluded.city,
                 industry=excluded.industry, email=COALESCE(excluded.email, companies.email),
@@ -531,11 +532,12 @@ impl Database {
                 linkedin_url=COALESCE(excluded.linkedin_url, companies.linkedin_url), hiring=excluded.hiring,
                 engineering_jobs=excluded.engineering_jobs, remote_jobs=excluded.remote_jobs,
                 outsourcing_keywords=excluded.outsourcing_keywords, lead_score=excluded.lead_score,
-                priority_tier=excluded.priority_tier, tech_stack=excluded.tech_stack, last_crawled=excluded.last_crawled",
+                priority_tier=excluded.priority_tier, tech_stack=excluded.tech_stack,
+                contact_person=COALESCE(excluded.contact_person, companies.contact_person), last_crawled=excluded.last_crawled",
             params![
                 c.name, c.domain, c.website, c.country, c.city, c.industry, c.email, c.phone,
                 c.contact_url, c.linkedin_url, c.hiring as i32, c.engineering_jobs, c.remote_jobs,
-                c.outsourcing_keywords, c.lead_score, c.priority_tier, tech_stack_json, now
+                c.outsourcing_keywords, c.lead_score, c.priority_tier, tech_stack_json, c.contact_person, now
             ],
         )?;
 

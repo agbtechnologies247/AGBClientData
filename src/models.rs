@@ -20,6 +20,7 @@ pub struct Company {
     pub lead_score: i32,
     pub priority_tier: String, // "HIGH", "MEDIUM", "LOW"
     pub tech_stack: Vec<String>,
+    pub contact_person: Option<String>,
     pub last_crawled: Option<String>,
 }
 
