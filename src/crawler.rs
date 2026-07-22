@@ -214,13 +214,11 @@ impl AntiBlockingCrawler {
                                                 }
                                             }
 
-                                            if subpath.contains("team") || subpath.contains("about") || subpath.contains("leadership") {
-                                                let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
-                                                for p in &people {
-                                                    let _ = db.save_person(p);
-                                                }
-                                                extracted_people.extend(people);
+                                            let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
+                                            for p in &people {
+                                                let _ = db.save_person(p);
                                             }
+                                            extracted_people.extend(people);
                                         }
                                     }
                                 }

@@ -62,9 +62,24 @@ impl CampaignEngine {
         (subject, body)
     }
 
+    pub fn hostinger_config() -> HostingerSmtpConfig {
+        HostingerSmtpConfig {
+            smtp_host: "smtp.hostinger.com".to_string(),
+            smtp_port: 587,
+            sender_email: "support@agbtechnologies.com".to_string(),
+        }
+    }
+
     pub fn default_cto_outreach_template() -> (String, String) {
         let subject = "Question regarding {{Company}}'s software engineering roadmap".to_string();
-        let body = "Hi {{First_Name}},\n\nI was looking at {{Company}}'s technology leadership and saw your role as {{Title}}.\n\nWe at {{Sender_Company}} help high-growth tech companies scale their dedicated engineering teams and cloud infrastructure seamlessly.\n\nWould you be open to a quick 10-minute chat this Thursday to discuss your technical priorities for this quarter?\n\nBest regards,\nAGB Technologies Team".to_string();
+        let body = "Hi {{First_Name}},\n\nI was looking at {{Company}}'s technology leadership and saw your role as {{Title}}.\n\nWe at {{Sender_Company}} help high-growth tech companies scale their dedicated engineering teams and cloud infrastructure seamlessly.\n\nWould you be open to a quick 10-minute chat this Thursday to discuss your technical priorities for this quarter?\n\nBest regards,\nAGB Technologies Team\nsupport@agbtechnologies.com".to_string();
         (subject, body)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostingerSmtpConfig {
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub sender_email: String,
 }
