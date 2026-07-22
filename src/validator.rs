@@ -41,6 +41,99 @@ impl ContactValidator {
         true
     }
 
+    /// Advanced Email ML Confidence Scoring Engine
+    pub fn calculate_email_ml_score(
+        email: &str,
+        page_context: &str,
+        mx_record_found: bool,
+        is_catchall: bool,
+    ) -> (i32, String, bool) {
+        if !Self::validate_email_syntax(email) {
+            return (-100, "LOW".to_string(), false);
+        }
+
+        if !mx_record_found {
+            return (-100, "LOW".to_string(), false);
+        }
+
+        let mut score = 20; // +20 MX Record Exists
+
+        let lower_email = email.to_lowercase();
+        let parts: Vec<&str> = lower_email.split('@').collect();
+        if parts.len() != 2 {
+            return (-100, "LOW".to_string(), false);
+        }
+
+        let prefix = parts[0];
+        let domain = parts[1];
+
+        // 1. Generic Prefix Penalties
+        let generic_penalties = vec![
+            ("info", -20),
+            ("contact", -15),
+            ("support", -25),
+            ("help", -25),
+            ("sales", -10),
+            ("admin", -30),
+            ("billing", -25),
+            ("accounts", -25),
+            ("careers", -30),
+            ("jobs", -30),
+            ("noreply", -100),
+            ("no-reply", -100),
+            ("donotreply", -100),
+            ("webmaster", -30),
+        ];
+
+        let mut is_generic = false;
+        for (g_prefix, penalty) in generic_penalties {
+            if prefix == g_prefix || prefix.starts_with(g_prefix) {
+                score += penalty;
+                is_generic = true;
+                break;
+            }
+        }
+
+        // 2. Person-Based Email Bonus (+40)
+        let name_email_regex = Regex::new(r"^[a-z]+[._-][a-z]+$|^[a-z]{3,15}$").unwrap();
+        if !is_generic && name_email_regex.is_match(prefix) {
+            score += 40; // +40 Person-based email
+        }
+
+        // 3. Domain Reputation
+        let free_providers = vec!["gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "aol.com", "icloud.com"];
+        if free_providers.contains(&domain) {
+            score -= 10; // -10 Free email provider
+        } else {
+            score += 15; // +15 Custom business domain
+        }
+
+        // 4. Page Context Analysis
+        let ctx_lower = page_context.to_lowercase();
+        if ctx_lower.contains("about") || ctx_lower.contains("team") || ctx_lower.contains("leadership") || ctx_lower.contains("management") || ctx_lower.contains("founders") {
+            score += 20; // +20 Leadership page
+        } else if ctx_lower.contains("contact") {
+            score += 10; // +10 Contact page
+        } else if ctx_lower.contains("footer") || ctx_lower.contains("terms") || ctx_lower.contains("privacy") {
+            score -= 15; // -15 Footer/legal page
+        }
+
+        // 5. Catch-All Penalty
+        if is_catchall {
+            score -= 15;
+        }
+
+        let clamped_score = score.clamp(0, 100);
+        let confidence_tier = match clamped_score {
+            s if s >= 90 => "EXCELLENT".to_string(),
+            s if s >= 70 => "GOOD".to_string(),
+            s if s >= 50 => "MEDIUM".to_string(),
+            _ => "LOW".to_string(),
+        };
+
+        (clamped_score, confidence_tier, clamped_score >= 50)
+    }
+
     /// Level 2: DNS MX Record Lookup
     pub async fn verify_mx_record(&self, domain: &str) -> bool {
         match self.resolver.mx_lookup(domain).await {

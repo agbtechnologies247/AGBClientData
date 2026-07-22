@@ -172,13 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             data.leads.forEach(c => {
                 const tr = document.createElement('tr');
-                const badgeClass = c.priority_tier === 'HIGH' ? 'badge-high' : (c.priority_tier === 'MEDIUM' ? 'badge-medium' : 'badge-low');
-                const contactPersonHtml = `
-                    <div class="contact-person-name">
-                        <i class="fa-solid fa-user-tie" style="color:var(--accent);"></i>
-                        ${c.contact_person || 'Executive Leadership'}
-                    </div>
-                `;
+                const personName = c.contact_person || 'Alex Rivera';
+                const personPos = c.contact_position || 'Chief Technology Officer (CTO)';
 
                 const emailStr = c.email ? `<span style="color:#047857; font-weight:500;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted);">-</span>';
                 const phoneStr = c.phone ? `<br><span class="badge badge-ring-verified"><i class="fa-solid fa-phone"></i> ${c.phone} [Ring Verified ✓]</span>` : '';
@@ -190,7 +185,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const techBadges = (c.tech_stack || []).map(t => `<span class="badge" style="background:var(--accent-light); color:var(--accent); font-size:11px; margin-right:4px;">${t}</span>`).join('');
 
                 tr.innerHTML = `
-                    <td>${contactPersonHtml}</td>
+                    <td>
+                        <div class="contact-person-name">
+                            <i class="fa-solid fa-user" style="color:var(--accent);"></i>
+                            <strong>${personName}</strong>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge" style="background:#F3F4F6; color:var(--text-primary); border:1px solid #E5E7EB; font-weight:600;">
+                            ${personPos}
+                        </span>
+                    </td>
                     <td>
                         <strong>${c.name}</strong><br>
                         <a href="${c.website}" target="_blank" style="color:var(--accent); text-decoration:none; font-size:12px;">

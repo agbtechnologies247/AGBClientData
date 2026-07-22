@@ -22,6 +22,7 @@ pub struct Company {
     pub tech_stack: Vec<String>,
     pub qualification_stage: String, // "DISCOVERED", "ENRICHED", "CONTACTED", "QUALIFIED", "PROPOSAL", "WON"
     pub contact_person: Option<String>,
+    pub contact_position: Option<String>,
     pub last_crawled: Option<String>,
 }
 

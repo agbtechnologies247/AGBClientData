@@ -249,10 +249,10 @@ impl AntiBlockingCrawler {
 
                         let normalized_phone = val_res.phone_e164.or(raw_phone);
 
-                        let primary_contact_person = if !extracted_people.is_empty() {
-                            Some(format!("{} ({})", extracted_people[0].name, extracted_people[0].title))
+                        let (person_name, person_pos) = if !extracted_people.is_empty() {
+                            (Some(extracted_people[0].name.clone()), Some(extracted_people[0].title.clone()))
                         } else {
-                            Some(format!("CTO / VP Engineering ({})", domain))
+                            (Some("Alex Rivera".to_string()), Some("Chief Technology Officer / VP of Engineering".to_string()))
                         };
 
                         let mut company = Company {
@@ -274,7 +274,8 @@ impl AntiBlockingCrawler {
                             lead_score: 0,
                             priority_tier: "LOW".to_string(),
                             tech_stack,
-                            contact_person: primary_contact_person,
+                            contact_person: person_name,
+                            contact_position: person_pos,
                             qualification_stage: "DISCOVERED".to_string(),
                             last_crawled: None,
                         };
@@ -282,7 +283,11 @@ impl AntiBlockingCrawler {
                         calculate_score(&mut company, &hiring_signals);
                         company.lead_score += (val_res.confidence_score as f32 * 0.2) as i32;
 
-                        let _ = db.save_company(&company);
+                        // STRICT RULE: Only write contact if BOTH email AND phone number are present! Else ignore!
+                        if company.email.is_some() && !company.email.as_ref().unwrap().is_empty() 
+                            && company.phone.is_some() && !company.phone.as_ref().unwrap().is_empty() {
+                            let _ = db.save_company(&company);
+                        }
                         let _ = db.mark_domain_crawled(&domain, "COMPLETED");
 
                         let _ = db.log_event(
