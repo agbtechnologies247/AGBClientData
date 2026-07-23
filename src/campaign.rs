@@ -1,5 +1,6 @@
 use crate::db::Database;
 use crate::models::Person;
+use crate::validator::ContactValidator;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use serde::{Deserialize, Serialize};
@@ -158,6 +159,8 @@ Phone: +91 9049874780"#.to_string();
         let (default_subject, default_body) = Self::default_alfred_billsoft_template();
         let mut sent_count = 0;
 
+        let validator = ContactValidator::new();
+
         for company in unsent_leads {
             let email_addr = match company.email.clone() {
                 Some(e) if !e.trim().is_empty() => e.trim().to_string(),
@@ -168,6 +171,21 @@ Phone: +91 9049874780"#.to_string();
             if db.is_email_already_sent(&email_addr).unwrap_or(false) {
                 let _ = db.log_event("WARN", &company.domain, &format!("Skipping duplicate email address: {}", email_addr));
                 continue;
+            }
+
+            // Level 1 & 2 Validation: Validate syntax and MX DNS record before sending
+            if !ContactValidator::validate_email_syntax(&email_addr) {
+                let _ = db.log_event("WARN", &company.domain, &format!("Skipping invalid email syntax: {}", email_addr));
+                let _ = db.record_sent_email_history(&email_addr, &company.name, "INVALID");
+                continue;
+            }
+
+            if let Some(domain_part) = email_addr.split('@').nth(1) {
+                if !validator.verify_mx_record(domain_part).await {
+                    let _ = db.log_event("WARN", &company.domain, &format!("Skipping domain with missing MX DNS record: {}", domain_part));
+                    let _ = db.record_sent_email_history(&email_addr, &company.name, "BOUNCED");
+                    continue;
+                }
             }
 
             let person_name = company.contact_person.clone().unwrap_or_else(|| "Technology Executive".to_string());
