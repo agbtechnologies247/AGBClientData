@@ -174,7 +174,7 @@ impl Database {
         Ok(())
     }
 
-    fn seed_data_if_empty(&self) -> Result<()> {
+    pub fn seed_data_if_empty(&self) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let company_count: i64 = conn.query_row("SELECT COUNT(*) FROM companies", [], |r| r.get(0))?;
 
@@ -211,7 +211,7 @@ impl Database {
             ];
             for p in sample_proxies {
                 conn.execute(
-                    "INSERT INTO proxies (url, protocol, active) VALUES (?1, ?2, 1)",
+                    "INSERT OR IGNORE INTO proxies (url, protocol, active) VALUES (?1, ?2, 1)",
                     params![p.0, p.1],
                 )?;
             }
@@ -358,7 +358,7 @@ impl Database {
     pub fn is_domain_crawled(&self, domain: &str) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
         let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1",
+            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1 AND status = 'COMPLETED'",
             params![domain],
             |r| r.get(0),
         )?;
@@ -892,13 +892,20 @@ impl Database {
     }
 
     pub fn clear_all_data(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-        let _ = conn.execute("DELETE FROM companies", []);
-        let _ = conn.execute("DELETE FROM people", []);
-        let _ = conn.execute("DELETE FROM crawled_domains", []);
-        let _ = conn.execute("DELETE FROM search_queries", []);
-        let _ = conn.execute("DELETE FROM crawl_queue", []);
-        let _ = conn.execute("DELETE FROM crawl_logs", []);
+        {
+            let conn = self.conn.lock().unwrap();
+            let _ = conn.execute("DELETE FROM companies", []);
+            let _ = conn.execute("DELETE FROM people", []);
+            let _ = conn.execute("DELETE FROM investors", []);
+            let _ = conn.execute("DELETE FROM campaigns", []);
+            let _ = conn.execute("DELETE FROM outreach_emails", []);
+            let _ = conn.execute("DELETE FROM proxies", []);
+            let _ = conn.execute("DELETE FROM crawled_domains", []);
+            let _ = conn.execute("DELETE FROM search_queries", []);
+            let _ = conn.execute("DELETE FROM crawl_queue", []);
+            let _ = conn.execute("DELETE FROM crawl_logs", []);
+        }
+        self.seed_data_if_empty()?;
         Ok(())
     }
 }

@@ -112,4 +112,22 @@ mod tests {
         assert!(match_res.match_score >= 85);
         assert!(match_res.match_reasons.iter().any(|r| r.contains("B2B SaaS")));
     }
+
+    #[test]
+    fn test_database_clear_and_reseeding() {
+        use crate::db::Database;
+        let db = Database::new(":memory:").expect("Failed to create in-memory database");
+        let stats_before = db.get_stats().expect("Failed to get stats before clear");
+
+        assert!(stats_before.total_companies > 0, "Initial companies count should be > 0");
+        assert!(stats_before.total_decision_makers > 0, "Initial decision makers count should be > 0");
+        assert!(stats_before.total_investors > 0, "Initial investors count should be > 0");
+
+        db.clear_all_data().expect("Failed to clear database");
+        let stats_after = db.get_stats().expect("Failed to get stats after clear");
+
+        assert!(stats_after.total_companies > 0, "Companies count after clear & re-seed should be > 0");
+        assert!(stats_after.total_decision_makers > 0, "Decision makers count after clear & re-seed should be > 0");
+        assert!(stats_after.total_investors > 0, "Investors count after clear & re-seed should be > 0");
+    }
 }

@@ -265,7 +265,7 @@ impl AutoSeedDiscovery {
             "https://toptal.com", "https://arc.dev", "https://crossover.com",
         ];
 
-        for s in static_seeds {
+        for s in &static_seeds {
             if let Some(domain) = extract_domain(s) {
                 if self.is_valid_company_domain(&domain) && !self.db.is_domain_crawled(&domain).unwrap_or(false) {
                     discovered_seeds.insert(s.to_string());
@@ -300,6 +300,12 @@ impl AutoSeedDiscovery {
                         }
                     }
                 }
+            }
+        }
+
+        if discovered_seeds.is_empty() {
+            for s in &static_seeds {
+                discovered_seeds.insert(s.to_string());
             }
         }
 
