@@ -968,6 +968,7 @@ impl Database {
         let mut stmt = conn.prepare(
             "SELECT id, recipient_email, company_name, status, sent_at
              FROM sent_emails_history
+             WHERE status = 'SENT'
              ORDER BY id DESC
              LIMIT ?"
         )?;

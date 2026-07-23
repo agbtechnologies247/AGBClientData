@@ -132,12 +132,42 @@ impl ContactValidator {
         (clamped_score, confidence_tier, clamped_score >= 50)
     }
 
-    /// Level 2: DNS MX Record Lookup
+    /// Level 2: DNS MX Record & Host Resolution Lookup
     pub async fn verify_mx_record(&self, domain: &str) -> bool {
-        match self.resolver.mx_lookup(domain).await {
-            Ok(lookup) => !lookup.iter().collect::<Vec<_>>().is_empty(),
-            Err(_) => false,
+        let clean_domain = domain.trim()
+            .trim_start_matches("https://")
+            .trim_start_matches("http://")
+            .split('/')
+            .next()
+            .unwrap_or(domain)
+            .split(':')
+            .next()
+            .unwrap_or(domain);
+
+        if clean_domain.is_empty() {
+            return false;
         }
+
+        // 1. Try MX record lookup and verify host IP resolution
+        if let Ok(lookup) = self.resolver.mx_lookup(clean_domain).await {
+            let records: Vec<_> = lookup.iter().collect();
+            if !records.is_empty() {
+                for mx in records {
+                    let host = mx.exchange().to_string();
+                    if self.resolver.lookup_ip(&host).await.is_ok() {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        // 2. Fallback: Direct A/AAAA lookup for implicit MX (RFC 5321)
+        if let Ok(ip_lookup) = self.resolver.lookup_ip(clean_domain).await {
+            return !ip_lookup.iter().collect::<Vec<_>>().is_empty();
+        }
+
+        false
     }
 
     /// Contact Confidence Score Calculation (0 - 100)
