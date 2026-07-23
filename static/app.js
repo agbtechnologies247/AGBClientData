@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // State Variables
-    let currentPage = 1;
-    const limit = 20;
+    // State Variables for Pagination
+    let leadsPage = 1, leadsLimit = 25;
+    let peoplePage = 1, peopleLimit = 25;
+    let investorsPage = 1, investorsLimit = 25;
+    let outreachPage = 1, outreachLimit = 25;
 
     // Toast Function
     function showToast(msg) {
@@ -12,6 +14,37 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             toast.classList.remove('show');
         }, 2500);
+    }
+
+    // Helper: Universal Table Pagination Renderer
+    function renderPaginationUI(prefix, totalCount, page, limit, onPageChange) {
+        const rangeEl = document.getElementById(`${prefix}Range`);
+        const totalEl = document.getElementById(`${prefix}Total`);
+        const indicatorEl = document.getElementById(`${prefix}PageIndicator`);
+        const prevBtn = document.getElementById(`btnPrev${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`);
+        const nextBtn = document.getElementById(`btnNext${prefix.charAt(0).toUpperCase() + prefix.slice(1)}`);
+        const limitSelect = document.getElementById(`${prefix}LimitSelect`);
+
+        const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+        const startItem = totalCount === 0 ? 0 : (page - 1) * limit + 1;
+        const endItem = Math.min(totalCount, page * limit);
+
+        if (rangeEl) rangeEl.innerText = `${startItem}-${endItem}`;
+        if (totalEl) totalEl.innerText = totalCount.toLocaleString();
+        if (indicatorEl) indicatorEl.innerText = `Page ${page} of ${totalPages}`;
+
+        if (prevBtn) {
+            prevBtn.disabled = page <= 1;
+            prevBtn.onclick = () => { if (page > 1) onPageChange(page - 1, limit); };
+        }
+        if (nextBtn) {
+            nextBtn.disabled = page >= totalPages;
+            nextBtn.onclick = () => { if (page < totalPages) onPageChange(page + 1, limit); };
+        }
+        if (limitSelect) {
+            limitSelect.value = limit.toString();
+            limitSelect.onchange = (e) => { onPageChange(1, parseInt(e.target.value, 10)); };
+        }
     }
 
     // 1-Click Copy helper with HTTP fallback
@@ -141,15 +174,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Fetch Leads List (Strict filter: Companies with Verified Email Only)
-    async function loadLeads() {
-        const search = document.getElementById('filterSearch').value;
-        const country = document.getElementById('filterCountry').value;
-        const priority = document.getElementById('filterPriority').value;
-        const hiringOnly = document.getElementById('filterHiringOnly').checked;
+    async function loadLeads(newPage, newLimit) {
+        if (newPage) leadsPage = newPage;
+        if (newLimit) leadsLimit = newLimit;
+
+        const search = document.getElementById('filterSearch')?.value || '';
+        const country = document.getElementById('filterCountry')?.value || 'ALL';
+        const priority = document.getElementById('filterPriority')?.value || 'ALL';
+        const hiringOnly = document.getElementById('filterHiringOnly')?.checked || false;
 
         const params = new URLSearchParams({
-            page: currentPage,
-            limit: limit,
+            page: leadsPage,
+            limit: leadsLimit,
             country: country,
             priority: priority,
             hiring_only: hiringOnly,
@@ -161,16 +197,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
 
             const tbody = document.getElementById('leadsTableBody');
-            tbody.innerHTML = '';
+            if (tbody) tbody.innerHTML = '';
 
-            document.getElementById('leadsCountBadge').innerText = `Showing ${data.leads.length} of ${data.total} verified companies`;
+            const total = data.total || 0;
+            const leads = data.leads || [];
 
-            if (!data.leads || data.leads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">No verified company leads found matching criteria.</td></tr>`;
+            const badge = document.getElementById('leadsCountBadge');
+            if (badge) badge.innerText = `Showing ${leads.length} of ${total} verified companies`;
+
+            renderPaginationUI('leads', total, leadsPage, leadsLimit, (p, l) => loadLeads(p, l));
+
+            if (!leads || leads.length === 0) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 24px; color: var(--text-muted);">No verified company leads found matching criteria.</td></tr>`;
                 return;
             }
 
-            data.leads.forEach(c => {
+            leads.forEach(c => {
                 const tr = document.createElement('tr');
                 const badgeClass = c.priority_tier === 'HIGH' ? 'badge-high' : (c.priority_tier === 'MEDIUM' ? 'badge-medium' : 'badge-low');
                 const personName = c.contact_person || 'Alex Rivera';
@@ -221,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                 `;
-                tbody.appendChild(tr);
+                if (tbody) tbody.appendChild(tr);
             });
 
             document.querySelectorAll('.btn-view-detail').forEach(b => {
@@ -244,13 +286,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Fetch Decision Makers (People)
-    async function loadPeople() {
-        const search = document.getElementById('filterPeopleSearch').value;
-        const role = document.getElementById('filterPeopleRole').value;
+    async function loadPeople(newPage, newLimit) {
+        if (newPage) peoplePage = newPage;
+        if (newLimit) peopleLimit = newLimit;
+
+        const search = document.getElementById('filterPeopleSearch')?.value || '';
+        const role = document.getElementById('filterPeopleRole')?.value || 'ALL';
 
         const params = new URLSearchParams({
-            page: 1,
-            limit: 50,
+            page: peoplePage,
+            limit: peopleLimit,
             role: role,
             search_query: search
         });
@@ -259,11 +304,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/api/people?${params}`);
             const data = await res.json();
             const tbody = document.getElementById('peopleTableBody');
-            tbody.innerHTML = '';
+            if (tbody) tbody.innerHTML = '';
 
-            document.getElementById('peopleCountBadge').innerText = `${data.people.length} decision makers ranked`;
+            const total = data.total || (data.people ? data.people.length : 0);
+            const people = data.people || [];
 
-            data.people.forEach(p => {
+            const badge = document.getElementById('peopleCountBadge');
+            if (badge) badge.innerText = `${total} decision makers ranked`;
+
+            renderPaginationUI('people', total, peoplePage, peopleLimit, (p, l) => loadPeople(p, l));
+
+            if (!people || people.length === 0) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">No decision makers found.</td></tr>`;
+                return;
+            }
+
+            people.forEach(p => {
                 const tr = document.createElement('tr');
                 const copyEmailBtn = p.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${p.public_email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
 
@@ -291,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${p.linkedin_url ? `<a href="${p.linkedin_url}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:11px;"><i class="fa-solid fa-brands fa-linkedin"></i> LinkedIn</a>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
                 `;
-                tbody.appendChild(tr);
+                if (tbody) tbody.appendChild(tr);
             });
         } catch (err) {
             console.error("Error loading decision makers:", err);
@@ -299,7 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Fetch Sent Emails Outreach History
-    async function loadOutreachHistory() {
+    async function loadOutreachHistory(newPage, newLimit) {
+        if (newPage) outreachPage = newPage;
+        if (newLimit) outreachLimit = newLimit;
+
         try {
             const res = await fetch('/api/outreach/history');
             const data = await res.json();
@@ -307,12 +366,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            if (!data.outreach_history || data.outreach_history.length === 0) {
+            const allItems = data.outreach_history || [];
+            const total = allItems.length;
+
+            renderPaginationUI('outreach', total, outreachPage, outreachLimit, (p, l) => loadOutreachHistory(p, l));
+
+            if (!allItems || allItems.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No outreach emails dispatched yet. Hourly daemon active.</td></tr>`;
                 return;
             }
 
-            data.outreach_history.forEach(item => {
+            const startIdx = (outreachPage - 1) * outreachLimit;
+            const pageItems = allItems.slice(startIdx, startIdx + outreachLimit);
+
+            pageItems.forEach(item => {
                 const tr = document.createElement('tr');
                 const badgeClass = item.status === 'SENT' ? 'badge-high' : (item.status === 'REPLIED' ? 'badge-high' : 'badge-low');
                 tr.innerHTML = `
@@ -344,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnRefreshOutreachHistory = document.getElementById('btnRefreshOutreachHistory');
     if (btnRefreshOutreachHistory) {
-        btnRefreshOutreachHistory.addEventListener('click', loadOutreachHistory);
+        btnRefreshOutreachHistory.addEventListener('click', () => loadOutreachHistory());
     }
 
     // Lead Detail Modal
@@ -406,19 +473,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('btnCloseModal').addEventListener('click', () => {
-        document.getElementById('leadModal').classList.remove('active');
+    document.getElementById('btnCloseModal')?.addEventListener('click', () => {
+        document.getElementById('leadModal')?.classList.remove('active');
     });
 
     // Fetch Investors
-    async function loadInvestors() {
-        const search = document.getElementById('filterInvSearch').value;
-        const itype = document.getElementById('filterInvType').value;
-        const focus = document.getElementById('filterInvFocus').value;
+    async function loadInvestors(newPage, newLimit) {
+        if (newPage) investorsPage = newPage;
+        if (newLimit) investorsLimit = newLimit;
+
+        const search = document.getElementById('filterInvSearch')?.value || '';
+        const itype = document.getElementById('filterInvType')?.value || 'ALL';
+        const focus = document.getElementById('filterInvFocus')?.value || 'ALL';
 
         const params = new URLSearchParams({
-            page: 1,
-            limit: 50,
+            page: investorsPage,
+            limit: investorsLimit,
             investor_type: itype,
             focus: focus,
             search_query: search
@@ -428,11 +498,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`/api/investors?${params}`);
             const data = await res.json();
             const tbody = document.getElementById('investorTableBody');
-            tbody.innerHTML = '';
+            if (tbody) tbody.innerHTML = '';
 
-            document.getElementById('investorCountBadge').innerText = `${data.investors.length} investors found`;
+            const total = data.total || (data.investors ? data.investors.length : 0);
+            const investors = data.investors || [];
 
-            data.investors.forEach(inv => {
+            const badge = document.getElementById('investorCountBadge');
+            if (badge) badge.innerText = `${total} investors found`;
+
+            renderPaginationUI('investors', total, investorsPage, investorsLimit, (p, l) => loadInvestors(p, l));
+
+            if (!investors || investors.length === 0) {
+                if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">No investors found.</td></tr>`;
+                return;
+            }
+
+            investors.forEach(inv => {
                 const tr = document.createElement('tr');
                 const focusBadges = inv.focus.map(f => `<span class="badge" style="background:rgba(139,92,246,0.15); color:#c084fc; font-size:10px; margin-right:4px;">${f}</span>`).join('');
                 const portBadges = inv.portfolio_highlights.map(p => `<span class="badge" style="background:rgba(255,255,255,0.08); font-size:10px; margin-right:4px;">${p}</span>`).join('');
@@ -466,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${focusBadges}</td>
                     <td>${portBadges}</td>
                 `;
-                tbody.appendChild(tr);
+                if (tbody) tbody.appendChild(tr);
             });
         } catch (err) {
             console.error("Error loading investors:", err);
@@ -577,19 +658,59 @@ document.addEventListener('DOMContentLoaded', () => {
         loadStats();
     });
 
+    // Save Stealth Settings
+    document.getElementById('formCrawlerSettings')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const mode = document.getElementById('settingMode')?.value || 'stealth';
+        try {
+            const res = await fetch('/api/crawler/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seed_urls: [], mode: mode })
+            });
+            if (res.ok) {
+                showToast(`Stealth settings updated! Mode set to ${mode.toUpperCase()}.`);
+                loadStats();
+            }
+        } catch (err) {
+            alert("Error saving settings: " + err);
+        }
+    });
+
+    // Target Domain Manager Launch
+    document.getElementById('btnLaunchCrawl')?.addEventListener('click', async () => {
+        const seedText = document.getElementById('seedUrlsArea')?.value || '';
+        const seeds = seedText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+        const mode = document.getElementById('settingMode')?.value || 'stealth';
+
+        try {
+            const res = await fetch('/api/crawler/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seed_urls: seeds, mode: mode })
+            });
+            if (res.ok) {
+                showToast(`Crawl session launched with ${seeds.length > 0 ? seeds.length : 'default'} seed domains!`);
+                loadStats();
+            }
+        } catch (err) {
+            alert("Error launching crawl: " + err);
+        }
+    });
+
     // Filter event listeners
-    document.getElementById('filterSearch')?.addEventListener('input', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterCountry')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterPriority')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterHiringOnly')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('btnRefreshLeads')?.addEventListener('click', loadLeads);
+    document.getElementById('filterSearch')?.addEventListener('input', () => { leadsPage = 1; loadLeads(); });
+    document.getElementById('filterCountry')?.addEventListener('change', () => { leadsPage = 1; loadLeads(); });
+    document.getElementById('filterPriority')?.addEventListener('change', () => { leadsPage = 1; loadLeads(); });
+    document.getElementById('filterHiringOnly')?.addEventListener('change', () => { leadsPage = 1; loadLeads(); });
+    document.getElementById('btnRefreshLeads')?.addEventListener('click', () => loadLeads());
 
-    document.getElementById('filterPeopleSearch')?.addEventListener('input', loadPeople);
-    document.getElementById('filterPeopleRole')?.addEventListener('change', loadPeople);
+    document.getElementById('filterPeopleSearch')?.addEventListener('input', () => { peoplePage = 1; loadPeople(); });
+    document.getElementById('filterPeopleRole')?.addEventListener('change', () => { peoplePage = 1; loadPeople(); });
 
-    document.getElementById('filterInvSearch')?.addEventListener('input', loadInvestors);
-    document.getElementById('filterInvType')?.addEventListener('change', loadInvestors);
-    document.getElementById('filterInvFocus')?.addEventListener('change', loadInvestors);
+    document.getElementById('filterInvSearch')?.addEventListener('input', () => { investorsPage = 1; loadInvestors(); });
+    document.getElementById('filterInvType')?.addEventListener('change', () => { investorsPage = 1; loadInvestors(); });
+    document.getElementById('filterInvFocus')?.addEventListener('change', () => { investorsPage = 1; loadInvestors(); });
 
     // Proxy Loader
     async function loadProxies() {

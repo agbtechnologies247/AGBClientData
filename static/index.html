@@ -189,6 +189,20 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="pagination-bar" id="leadsPagination">
+                        <div class="pagination-info">Showing <span id="leadsRange">0-0</span> of <span id="leadsTotal">0</span> verified companies</div>
+                        <div class="pagination-controls">
+                            <button class="btn btn-secondary btn-sm" id="btnPrevLeads"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <span class="page-indicator" id="leadsPageIndicator">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-sm" id="btnNextLeads">Next <i class="fa-solid fa-chevron-right"></i></button>
+                            <select id="leadsLimitSelect" class="limit-select">
+                                <option value="10">10 / page</option>
+                                <option value="25" selected>25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -274,6 +288,20 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="pagination-bar" id="investorsPagination">
+                        <div class="pagination-info">Showing <span id="investorsRange">0-0</span> of <span id="investorsTotal">0</span> investors</div>
+                        <div class="pagination-controls">
+                            <button class="btn btn-secondary btn-sm" id="btnPrevInvestors"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <span class="page-indicator" id="investorsPageIndicator">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-sm" id="btnNextInvestors">Next <i class="fa-solid fa-chevron-right"></i></button>
+                            <select id="investorsLimitSelect" class="limit-select">
+                                <option value="10">10 / page</option>
+                                <option value="25" selected>25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -318,6 +346,20 @@
                                 <!-- Dynamic Decision Makers -->
                             </tbody>
                         </table>
+                    </div>
+                    <div class="pagination-bar" id="peoplePagination">
+                        <div class="pagination-info">Showing <span id="peopleRange">0-0</span> of <span id="peopleTotal">0</span> decision makers</div>
+                        <div class="pagination-controls">
+                            <button class="btn btn-secondary btn-sm" id="btnPrevPeople"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <span class="page-indicator" id="peoplePageIndicator">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-sm" id="btnNextPeople">Next <i class="fa-solid fa-chevron-right"></i></button>
+                            <select id="peopleLimitSelect" class="limit-select">
+                                <option value="10">10 / page</option>
+                                <option value="25" selected>25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -426,47 +468,53 @@ Phone: +91 9049874780</textarea>
                         <div class="card-header">
                             <h3><i class="fa-solid fa-sliders"></i> Anti-Blocking Stealth Settings</h3>
                         </div>
-                        <form id="formCrawlerSettings" class="form-grid">
-                            <div class="form-group">
-                                <label>Crawl Behavior Mode</label>
-                                <select id="settingMode">
-                                    <option value="stealth" selected>Stealth / Human Mode (Random Delays 1.5s - 4.0s)</option>
-                                    <option value="balanced">Balanced Mode (Delays 0.8s - 2.0s)</option>
-                                    <option value="fast">Fast Mode (High Speed)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Max Pages Per Domain (Crawl Budget)</label>
-                                <input type="number" id="settingMaxPages" value="5" min="1" max="20">
-                            </div>
-                            <div class="form-group">
-                                <label>User-Agent & Header Rotation</label>
-                                <select id="settingUARotation">
-                                    <option value="true">Enabled (Emulate Chrome, Firefox, Edge, Safari)</option>
-                                    <option value="false">Disabled</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Proxy Rotation Pool</label>
-                                <select id="settingProxyRotation">
-                                    <option value="true">Enabled (Round-Robin Pool)</option>
-                                    <option value="false">Disabled</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
-                        </form>
+                        <div class="card-body-padded">
+                            <form id="formCrawlerSettings">
+                                <div class="form-group">
+                                    <label>Crawl Behavior Mode</label>
+                                    <select id="settingMode" style="width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px;">
+                                        <option value="stealth" selected>Stealth / Human Mode (Random Delays 1.5s - 4.0s)</option>
+                                        <option value="balanced">Balanced Mode (Delays 0.8s - 2.0s)</option>
+                                        <option value="fast">Fast Mode (High Speed)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Max Pages Per Domain (Crawl Budget)</label>
+                                    <input type="number" id="settingMaxPages" value="5" min="1" max="20" style="width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px;">
+                                </div>
+                                <div class="form-group">
+                                    <label>User-Agent & Header Rotation</label>
+                                    <select id="settingUARotation" style="width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px;">
+                                        <option value="true">Enabled (Emulate Chrome, Firefox, Edge, Safari)</option>
+                                        <option value="false">Disabled</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Proxy Rotation Pool</label>
+                                    <select id="settingProxyRotation" style="width:100%; padding:10px 12px; border:1px solid var(--border-color); border-radius:8px;">
+                                        <option value="true">Enabled (Round-Robin Pool)</option>
+                                        <option value="false">Disabled</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:8px;">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save Stealth Settings
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="card">
                         <div class="card-header">
                             <h3><i class="fa-solid fa-spider"></i> Target Domain Manager</h3>
                         </div>
-                        <div class="form-group">
-                            <label>Target Seed URLs (One per line)</label>
-                            <textarea id="seedUrlsArea" rows="6" placeholder="https://thoughtworks.com&#10;https://epam.com"></textarea>
-                        </div>
-                        <div class="button-row">
-                            <button class="btn btn-primary" id="btnLaunchCrawl"><i class="fa-solid fa-play"></i> Launch Crawl Engine</button>
+                        <div class="card-body-padded">
+                            <div class="form-group">
+                                <label>Target Seed URLs (One per line)</label>
+                                <textarea id="seedUrlsArea" rows="6" placeholder="https://thoughtworks.com&#10;https://epam.com" style="width:100%; padding:12px; border:1px solid var(--border-color); border-radius:8px;"></textarea>
+                            </div>
+                            <div class="button-row" style="margin-top:16px;">
+                                <button class="btn btn-primary" id="btnLaunchCrawl" style="width:100%; justify-content:center; padding:12px;"><i class="fa-solid fa-play"></i> Launch Crawl Engine</button>
+                            </div>
                         </div>
                     </div>
                 </div>

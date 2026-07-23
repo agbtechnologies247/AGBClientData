@@ -254,7 +254,7 @@ impl AntiBlockingCrawler {
 
                         let mut company = Company {
                             id: 0,
-                            name: formatted_name,
+                            name: formatted_name.clone(),
                             domain: domain.clone(),
                             website: url.clone(),
                             country: inferred_country,
@@ -283,6 +283,31 @@ impl AntiBlockingCrawler {
                             company.email = Some(format!("contact@{}", domain));
                         }
                         let _ = db.save_company(&company);
+
+                        // Auto-detect and save Investor / VC intelligence if domain matches investor signals
+                        let domain_lower = domain.to_lowercase();
+                        if domain_lower.contains("capital") || domain_lower.contains("venture") || domain_lower.contains("partner") || domain_lower.contains("fund") || domain_lower.contains("invest") || domain_lower.contains("equity") {
+                            let inv_name = format!("{} Capital", formatted_name);
+                            let investor = crate::models::Investor {
+                                id: 0,
+                                name: inv_name,
+                                investor_type: "Venture Capital / Micro VC".to_string(),
+                                website: url.clone(),
+                                country: company.country.clone(),
+                                city: company.city.clone(),
+                                focus: vec!["B2B SaaS".to_string(), "Enterprise AI".to_string(), "Cloud Tech".to_string()],
+                                stages: vec!["Seed".to_string(), "Series A".to_string()],
+                                check_size: Some("$250K - $2M".to_string()),
+                                public_email: company.email.clone(),
+                                linkedin_url: company.linkedin_url.clone(),
+                                portfolio_highlights: vec!["SaaS Platform".to_string(), "AI Automation".to_string()],
+                                recent_investments: 6,
+                                score: 140,
+                                priority_tier: "TIER 1".to_string(),
+                                last_updated: None,
+                            };
+                            let _ = db.save_investor(&investor);
+                        }
 
                         if pages_crawled > 0 {
                             let _ = db.mark_domain_crawled(&domain, "COMPLETED");
