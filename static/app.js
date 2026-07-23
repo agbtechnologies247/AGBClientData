@@ -5,6 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let investorsPage = 1, investorsLimit = 25;
     let outreachPage = 1, outreachLimit = 25;
 
+    // Collapsible Sidebar Toggle & Persistence
+    const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+    const appLayout = document.querySelector('.app-layout');
+
+    if (localStorage.getItem('sidebar_collapsed') === 'true' && appLayout) {
+        appLayout.classList.add('sidebar-collapsed');
+    }
+
+    if (btnToggleSidebar && appLayout) {
+        btnToggleSidebar.addEventListener('click', () => {
+            appLayout.classList.toggle('sidebar-collapsed');
+            const isCollapsed = appLayout.classList.contains('sidebar-collapsed');
+            localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        });
+    }
+
     // Toast Function
     function showToast(msg) {
         const toast = document.getElementById('copyToast');

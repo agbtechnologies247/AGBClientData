@@ -75,9 +75,14 @@
 
             <!-- Header Bar -->
             <header class="top-header">
-                <div class="page-title">
-                    <h1 id="pageHeading">US & UK IT Company Lead Intelligence</h1>
-                    <p>Automated discovery, anti-blocking extraction & decision maker intelligence</p>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button class="btn btn-secondary" id="btnToggleSidebar" title="Toggle Sidebar Navigation" style="height:42px; width:42px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                        <i class="fa-solid fa-bars" style="font-size:16px;"></i>
+                    </button>
+                    <div class="page-title">
+                        <h1 id="pageHeading">US & UK IT Company Lead Intelligence</h1>
+                        <p>Automated discovery, anti-blocking extraction & decision maker intelligence</p>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <button class="btn btn-secondary" id="btnClearDatabaseBtn" style="color:var(--status-danger); border-color:#FECACA; background:#FEF2F2;">
@@ -92,40 +97,39 @@
                 </div>
             </header>
 
-            <!-- Stats Banner -->
-            <section class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon purple"><i class="fa-solid fa-building"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-label">Verified Companies</span>
-                        <h3 id="statTotalLeads">0</h3>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon blue"><i class="fa-solid fa-user-tie"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-label">Decision Makers (CTO/VP)</span>
-                        <h3 id="statTotalPeople">0</h3>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green"><i class="fa-solid fa-fire"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-label">High Intent (Score ≥ 80)</span>
-                        <h3 id="statHighIntent">0</h3>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></div>
-                    <div class="stat-info">
-                        <span class="stat-label">Verified SaaS & AI Investors</span>
-                        <h3 id="statTotalInvestors">0</h3>
-                    </div>
-                </div>
-            </section>
-
             <!-- Tab: Dashboard & Leads -->
             <div class="tab-content active" id="tabDashboard">
+                <!-- Stats Banner (Encapsulated inside Dashboard Tab) -->
+                <section class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon purple"><i class="fa-solid fa-building"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Verified Companies</span>
+                            <h3 id="statTotalLeads">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Decision Makers (CTO/VP)</span>
+                            <h3 id="statTotalPeople">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fa-solid fa-fire"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">High Intent (Score ≥ 80)</span>
+                            <h3 id="statHighIntent">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Verified SaaS & AI Investors</span>
+                            <h3 id="statTotalInvestors">0</h3>
+                        </div>
+                    </div>
+                </section>
                 <!-- Filter Panel -->
                 <div class="filter-bar card">
                     <div class="filter-group search">
