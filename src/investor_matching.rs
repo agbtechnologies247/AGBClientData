@@ -1,4 +1,18 @@
-use crate::models::{Investor, InvestorMatchRequest, InvestorMatchResult};
+use crate::models::{Investor, InvestorMatchRequest, InvestorMatchResult, InvestorMatcherTrait};
+
+pub struct DefaultInvestorMatcher;
+
+impl DefaultInvestorMatcher {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl InvestorMatcherTrait for DefaultInvestorMatcher {
+    fn match_investor(&self, investor: &Investor, request: &InvestorMatchRequest) -> InvestorMatchResult {
+        match_investor(investor, request)
+    }
+}
 
 pub fn match_investor(inv: &Investor, req: &InvestorMatchRequest) -> InvestorMatchResult {
     let mut score = 20; // Base score

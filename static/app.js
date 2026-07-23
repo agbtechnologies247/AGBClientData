@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadCampaigns();
             }
             if (tabName === 'investors') {
-                pageHeading.innerText = 'B2B SaaS & AI Investor Intelligence';
+                pageHeading.innerText = 'Verified B2B SaaS & AI Investor Intelligence';
                 loadInvestors();
             }
             if (tabName === 'crawler') pageHeading.innerText = 'Anti-Blocking Crawler Settings';
@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Fetch Leads List (Strict filter: Companies with Verified Email/Phone Only)
+    // Fetch Leads List (Strict filter: Companies with Verified Email Only)
     async function loadLeads() {
         const search = document.getElementById('filterSearch').value;
         const country = document.getElementById('filterCountry').value;
@@ -177,12 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const personPos = c.contact_position || 'Chief Technology Officer (CTO)';
 
                 const emailStr = c.email ? `<span style="color:#047857; font-weight:500;"><i class="fa-solid fa-envelope"></i> ${c.email}</span>` : '<span style="color:var(--text-muted); font-size:12px;">No Email Listed</span>';
-                const phoneStr = (c.phone && c.phone.trim().length > 0)
-                    ? `<br><span class="badge badge-ring-verified"><i class="fa-solid fa-phone"></i> ${c.phone} [Ring Verified ✓]</span>`
-                    : '<br><span style="color:var(--text-muted); font-size:12px;"><i class="fa-solid fa-phone-slash"></i> No Direct Phone Listed</span>';
-                
                 const copyEmailBtn = c.email ? `<button class="btn-copy" onclick="copyToClipboard('${c.email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
-                const copyPhoneBtn = (c.phone && c.phone.trim().length > 0) ? `<button class="btn-copy" onclick="copyToClipboard('${c.phone}', 'Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 const hiringBadge = c.hiring ? `<span class="badge badge-high"><i class="fa-solid fa-user-plus"></i> Hiring (${c.engineering_jobs} Jobs)</span>` : '<span class="badge badge-low">No</span>';
                 const techBadges = (c.tech_stack || []).map(t => `<span class="badge" style="background:var(--accent-light); color:var(--accent); font-size:11px; margin-right:4px;">${t}</span>`).join('');
@@ -208,11 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td><span class="badge" style="background:var(--bg-subtle); border: 1px solid var(--border-color); color: var(--text-primary);">${c.country}</span></td>
                     <td><strong style="font-size:16px; color:var(--text-primary);">${c.lead_score}</strong></td>
                     <td><span class="badge ${badgeClass}">${c.priority_tier}</span></td>
-                    <td>${emailStr}${phoneStr}</td>
+                    <td>${emailStr}</td>
                     <td>
                         <div style="display:flex; gap:4px; flex-direction:column;">
                             ${copyEmailBtn}
-                            ${copyPhoneBtn}
                         </div>
                     </td>
                     <td>${hiringBadge}<br><div style="margin-top:4px;">${techBadges || '<span style="color:var(--text-muted);">-</span>'}</div></td>
@@ -222,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <i class="fa-solid fa-eye"></i> Details
                             </button>
                             <button class="btn btn-primary btn-sm btn-validate-lead" data-id="${c.id}">
-                                <i class="fa-solid fa-square-check"></i> Audit & Validate Lead
+                                <i class="fa-solid fa-square-check"></i> Audit Lead
                             </button>
                         </div>
                     </td>
@@ -272,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
             data.people.forEach(p => {
                 const tr = document.createElement('tr');
                 const copyEmailBtn = p.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${p.public_email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
-                const copyPhoneBtn = p.phone ? `<button class="btn-copy" onclick="copyToClipboard('${p.phone}', 'Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 tr.innerHTML = `
                     <td>
@@ -289,11 +282,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
                     <td><span class="badge" style="background:rgba(99,102,241,0.2); color:#a5b4fc;">${p.normalized_role}</span></td>
                     <td>${p.public_email ? `<span style="color:#a7f3d0;"><i class="fa-solid fa-envelope"></i> ${p.public_email}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
-                    <td>${p.phone ? `<span style="color:var(--text-secondary);"><i class="fa-solid fa-phone"></i> ${p.phone}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
                     <td>
                         <div style="display:flex; gap:4px; flex-direction:column;">
                             ${copyEmailBtn}
-                            ${copyPhoneBtn}
                         </div>
                     </td>
                     <td>
@@ -381,9 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${c.email ? `<button class="btn-copy" style="margin-left:6px;" onclick="copyToClipboard('${c.email}', 'Email')"><i class="fa-solid fa-copy"></i> Copy</button>` : ''}
                     </div>
                     <div>
-                        <span style="color:var(--text-secondary); font-size:11px;">Phone Number</span><br>
-                        <strong>${c.phone || 'Not Extracted'}</strong>
-                        ${c.phone ? `<button class="btn-copy" style="margin-left:6px;" onclick="copyToClipboard('${c.phone}', 'Phone')"><i class="fa-solid fa-copy"></i> Copy</button>` : ''}
+                        <span style="color:var(--text-secondary); font-size:11px;">Executive Contact</span><br>
+                        <strong>${c.contact_person || 'N/A'} (${c.contact_position || 'CTO'})</strong>
                     </div>
                 </div>
 
@@ -448,7 +438,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const portBadges = inv.portfolio_highlights.map(p => `<span class="badge" style="background:rgba(255,255,255,0.08); font-size:10px; margin-right:4px;">${p}</span>`).join('');
 
                 const copyEmailBtn = inv.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${inv.public_email}', 'Investor Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
-                const copyPhoneBtn = inv.phone ? `<button class="btn-copy" onclick="copyToClipboard('${inv.phone}', 'Investor Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 tr.innerHTML = `
                     <td>
@@ -472,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>
                         <div style="display:flex; gap:4px; flex-direction:column;">
                             ${copyEmailBtn}
-                            ${copyPhoneBtn}
                         </div>
                     </td>
                     <td>${focusBadges}</td>
@@ -515,7 +503,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const reasonBadges = m.match_reasons.map(r => `<span class="badge badge-high" style="font-size:10px; margin-right:4px;"><i class="fa-solid fa-check"></i> ${r}</span>`).join('');
 
                 const copyEmailBtn = inv.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${inv.public_email}', 'Investor Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
-                const copyPhoneBtn = inv.phone ? `<button class="btn-copy" onclick="copyToClipboard('${inv.phone}', 'Investor Phone')"><i class="fa-solid fa-copy"></i> Phone</button>` : '';
 
                 tr.innerHTML = `
                     <td>
@@ -541,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>
                         <div style="display:flex; gap:4px; flex-direction:column;">
                             ${copyEmailBtn}
-                            ${copyPhoneBtn}
                         </div>
                     </td>
                     <td>${focusBadges}</td>
@@ -553,18 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast("AI Investor Matching complete for AGB Technologies!");
         } catch (err) {
             console.error("Match error:", err);
-        }
-    });
-
-    // Auto Seed Discovery Action
-    document.getElementById('btnAutoSeed').addEventListener('click', async () => {
-        try {
-            const res = await fetch('/api/crawler/auto-seeds', { method: 'POST' });
-            const data = await res.json();
-            alert(`Live Discovery Engine synthesized ${data.count} new target company URLs across US/UK tech hubs.`);
-            loadStats();
-        } catch (err) {
-            alert("Failed to run seed generator: " + err);
         }
     });
 
@@ -750,14 +724,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span class="badge" style="background:#10B981; color:#FFF;">VALIDATED ✓</span>
                         </div>
 
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:12px 16px;">
-                            <div>
-                                <strong style="color:#1D4ED8; font-size:14px;"><i class="fa-solid fa-phone-volume"></i> Anonymous SIP Ringing Verification</strong>
-                                <p style="color:#1E40AF; font-size:12px; margin:2px 0 0 0;">Carrier Signaling: <strong>${lead.phone || '+1 415-555-0192'}</strong> • SIP OPTIONS Ack 200 OK</p>
-                            </div>
-                            <span class="badge badge-ring-verified">RING VERIFIED ✓</span>
-                        </div>
-
                         <div style="display:flex; justify-content:space-between; align-items:center; background:#FAF5FF; border:1px solid #E9D5FF; border-radius:10px; padding:12px 16px;">
                             <div>
                                 <strong style="color:#6B21A8; font-size:14px;"><i class="fa-solid fa-user-check"></i> Decision Maker Verification</strong>
@@ -809,47 +775,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnClearDatabaseBtn = document.getElementById('btnClearDatabaseBtn');
     if (btnClearDatabaseBtn) {
         btnClearDatabaseBtn.addEventListener('click', async () => {
-            if (!confirm("Are you sure you want to clear all existing crawled leads and restart a fresh crawl with 7-layer phone guardrails?")) {
+            if (!confirm("Are you sure you want to clear all existing crawled leads and restore default baseline leads?")) {
                 return;
             }
             try {
                 const res = await fetch('/api/crawler/clear-database', { method: 'POST' });
                 if (res.ok) {
-                    showToast("Database wiped cleanly. Restarting fresh seed discovery...");
-                    await fetch('/api/crawler/auto-seeds', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-                    await fetch('/api/crawler/start', { method: 'POST' });
+                    showToast("Database reset successfully with baseline leads!");
                     loadStats();
                     loadLeads();
                     loadPipeline();
                 }
             } catch (err) {
                 console.error("Error clearing database:", err);
-            }
-        });
-    }
-
-    // Custom Seed Batch Enqueueing
-    const btnEnqueueCustomSeeds = document.getElementById('btnEnqueueCustomSeeds');
-    if (btnEnqueueCustomSeeds) {
-        btnEnqueueCustomSeeds.addEventListener('click', async () => {
-            const raw = document.getElementById('customSeedDomains').value;
-            const urls = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0).map(d => d.startsWith('http') ? d : `https://${d}`);
-            if (urls.length === 0) {
-                alert("Please enter at least one target domain.");
-                return;
-            }
-            try {
-                const res = await fetch('/api/crawler/auto-seeds', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seed_urls: urls })
-                });
-                if (res.ok) {
-                    showToast(`Enqueued ${urls.length} target seeds into crawl queue!`);
-                    document.getElementById('customSeedDomains').value = '';
-                }
-            } catch (err) {
-                console.error("Error enqueuing seeds:", err);
             }
         });
     }

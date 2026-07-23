@@ -16,10 +16,7 @@ pub fn calculate_score(company: &mut Company, signals_found: &[String]) -> LeadS
     outsourcing_intent_score += (company.outsourcing_keywords as i32 * 25).min(80);
 
     if company.email.is_some() {
-        contact_info_bonus += 10;
-    }
-    if company.phone.is_some() {
-        contact_info_bonus += 10;
+        contact_info_bonus += 20;
     }
 
     let base_score = 10;

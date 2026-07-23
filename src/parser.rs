@@ -5,7 +5,6 @@ use url::Url;
 
 pub struct ParsedContent {
     pub emails: Vec<String>,
-    pub phones: Vec<String>,
     pub linkedin_url: Option<String>,
     pub contact_url: Option<String>,
     pub internal_links: Vec<String>,
@@ -21,7 +20,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
     let document = Html::parse_document(html_body);
     let mut emails_set = HashSet::new();
 
-    // 1. Expanded Email Regex & Mailto: Link Extraction
+    // 1. Email Regex Extraction
     let email_regex = Regex::new(r"(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}").unwrap();
     for mat in email_regex.find_iter(html_body) {
         let email = mat.as_str().to_lowercase();
@@ -30,7 +29,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 2. Extract from explicit mailto: links in HTML
+    // 2. Extract from mailto: links in HTML
     let a_selector = Selector::parse("a[href^='mailto:']").unwrap();
     for element in document.select(&a_selector) {
         if let Some(href) = element.value().attr("href") {
@@ -42,37 +41,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 3. Expanded Real Phone Extraction
-    let mut phones_set = HashSet::new();
-    
-    // Extract from tel: links first
-    let tel_selector = Selector::parse("a[href^='tel:']").unwrap();
-    for element in document.select(&tel_selector) {
-        if let Some(href) = element.value().attr("href") {
-            let phone_raw = href.trim_start_matches("tel:").split('?').next().unwrap_or("").trim().to_string();
-            if phone_raw.len() >= 7 {
-                phones_set.insert(phone_raw);
-            }
-        }
-    }
-
-    // Extract text content only (avoid HTML tags, scripts, CSS attributes)
-    let body_text = document.root_element().text().collect::<Vec<_>>().join(" ");
-    let phone_regex = Regex::new(r"(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}").unwrap();
-    for mat in phone_regex.find_iter(&body_text) {
-        let raw = mat.as_str().trim();
-        let digit_count = raw.chars().filter(|c| c.is_ascii_digit()).count();
-        if digit_count >= 7 && digit_count <= 15 && !raw.contains("2026") && !raw.contains("2025") && !raw.contains("1920") {
-            phones_set.insert(raw.to_string());
-        }
-    }
-
-    // 0. Multi-Layer Advertisement & Tracker Cracking / Stripping
-    let clean_html_body = html_body
-        .replace(r"(?i)<script[^>]*googlesyndication[^>]*>.*?</script>", "")
-        .replace(r"(?i)<iframe[^>]*ads[^>]*>.*?</iframe>", "");
-
-    // 4. Link Extraction (Contact, Team, Careers, Verified LinkedIn, External Links)
+    // 3. Link Extraction (Contact, Team, Careers, Verified LinkedIn, External Links)
     let link_selector = Selector::parse("a[href]").unwrap();
     let base_parsed = Url::parse(base_url).ok();
     let mut contact_url = None;
@@ -82,7 +51,6 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
 
     for element in document.select(&link_selector) {
         if let Some(href) = element.value().attr("href") {
-            // Only verified LinkedIn company or personal profile URLs
             if (href.contains("linkedin.com/company/") || href.contains("linkedin.com/in/")) && !href.contains("share") && linkedin_url.is_none() {
                 let clean_li = href.split('?').next().unwrap_or(href).to_string();
                 linkedin_url = Some(clean_li);
@@ -104,7 +72,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 5. Hiring & Outsourcing Intent Analysis
+    // 4. Hiring & Outsourcing Intent Analysis
     let lower_body = html_body.to_lowercase();
     let mut hiring_signals = Vec::new();
     let mut engineering_jobs = 0;
@@ -141,7 +109,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 6. Tech Stack Signals
+    // 5. Tech Stack Signals
     let mut tech_stack = Vec::new();
     let tech_keywords = vec![
         ("React", vec!["react.js", "reactjs", "react"]),
@@ -173,8 +141,6 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     });
 
-    let mut phones: Vec<String> = phones_set.into_iter().collect();
-    phones.sort();
     let mut internal_links: Vec<String> = internal_links_set.into_iter().collect();
     internal_links.truncate(20);
     let mut external_links: Vec<String> = external_links_set.into_iter().collect();
@@ -182,7 +148,6 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
 
     ParsedContent {
         emails,
-        phones,
         linkedin_url,
         contact_url,
         internal_links,

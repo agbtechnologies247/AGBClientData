@@ -65,7 +65,7 @@ pub fn generate_people_excel_export(db: &Database, filter: &PersonFilter) -> Res
     let worksheet = workbook.add_worksheet().set_name("Decision Makers")?;
     let headers = vec![
         "ID", "Name", "Executive Title", "Normalized Role", "AI Score",
-        "Company Name", "Company Domain", "Public Email", "Phone", "LinkedIn Profile"
+        "Company Name", "Company Domain", "Public Email", "LinkedIn Profile"
     ];
 
     for (col, text) in headers.iter().enumerate() {
@@ -92,8 +92,7 @@ pub fn generate_people_excel_export(db: &Database, filter: &PersonFilter) -> Res
         worksheet.write_string(row_idx, 5, &p.company_name)?;
         worksheet.write_string(row_idx, 6, &p.company_domain)?;
         worksheet.write_string(row_idx, 7, p.public_email.as_deref().unwrap_or("-"))?;
-        worksheet.write_string(row_idx, 8, p.phone.as_deref().unwrap_or("-"))?;
-        worksheet.write_string(row_idx, 9, p.linkedin_url.as_deref().unwrap_or("-"))?;
+        worksheet.write_string(row_idx, 8, p.linkedin_url.as_deref().unwrap_or("-"))?;
 
         row_idx += 1;
     }
@@ -113,11 +112,11 @@ pub fn generate_investor_excel_export(db: &Database, filter: &InvestorFilter) ->
         .set_background_color(Color::RGB(0xDCFCE7))
         .set_font_color(Color::RGB(0x166534));
 
-    let worksheet = workbook.add_worksheet().set_name("B2B SaaS Investors")?;
+    let worksheet = workbook.add_worksheet().set_name("B2B SaaS & AI Investors")?;
     
     let headers = vec![
         "ID", "Investor Name", "Type", "Website", "Country", "City",
-        "Investment Focus", "Stages", "Check Size", "Public Email", "Phone",
+        "Investment Focus", "Stages", "Check Size", "Public Email",
         "LinkedIn", "Portfolio Highlights", "Recent Investments", "Score", "Tier"
     ];
 
@@ -136,7 +135,6 @@ pub fn generate_investor_excel_export(db: &Database, filter: &InvestorFilter) ->
         let port_str = inv.portfolio_highlights.join(", ");
         let check_str = inv.check_size.as_deref().unwrap_or("-");
         let email_str = inv.public_email.as_deref().unwrap_or("-");
-        let phone_str = inv.phone.as_deref().unwrap_or("-");
         let linkedin_str = inv.linkedin_url.as_deref().unwrap_or("-");
         let city_str = inv.city.as_deref().unwrap_or("-");
 
@@ -150,17 +148,16 @@ pub fn generate_investor_excel_export(db: &Database, filter: &InvestorFilter) ->
         worksheet.write_string(row_idx, 7, &stages_str)?;
         worksheet.write_string(row_idx, 8, check_str)?;
         worksheet.write_string(row_idx, 9, email_str)?;
-        worksheet.write_string(row_idx, 10, phone_str)?;
-        worksheet.write_string(row_idx, 11, linkedin_str)?;
-        worksheet.write_string(row_idx, 12, &port_str)?;
-        worksheet.write_number(row_idx, 13, inv.recent_investments as f64)?;
+        worksheet.write_string(row_idx, 10, linkedin_str)?;
+        worksheet.write_string(row_idx, 11, &port_str)?;
+        worksheet.write_number(row_idx, 12, inv.recent_investments as f64)?;
 
         if let Some(f) = fmt {
-            worksheet.write_number_with_format(row_idx, 14, inv.score as f64, f)?;
-            worksheet.write_string_with_format(row_idx, 15, &inv.priority_tier, f)?;
+            worksheet.write_number_with_format(row_idx, 13, inv.score as f64, f)?;
+            worksheet.write_string_with_format(row_idx, 14, &inv.priority_tier, f)?;
         } else {
-            worksheet.write_number(row_idx, 14, inv.score as f64)?;
-            worksheet.write_string(row_idx, 15, &inv.priority_tier)?;
+            worksheet.write_number(row_idx, 13, inv.score as f64)?;
+            worksheet.write_string(row_idx, 14, &inv.priority_tier)?;
         }
 
         row_idx += 1;
@@ -172,7 +169,7 @@ pub fn generate_investor_excel_export(db: &Database, filter: &InvestorFilter) ->
 fn write_headers(worksheet: &mut Worksheet, header_format: &Format) -> Result<(), XlsxError> {
     let headers = vec![
         "ID", "Company Name", "Domain", "Website", "Country", "City",
-        "Industry", "Primary Email", "Phone Number", "Contact Page",
+        "Industry", "Primary Email", "Contact Page",
         "LinkedIn", "Hiring Status", "Eng Jobs", "Remote Jobs",
         "Intent Signals", "Lead Score", "Priority Tier", "Tech Stack", "Last Crawled"
     ];
@@ -187,7 +184,6 @@ fn write_company_row(worksheet: &mut Worksheet, row: u32, c: &crate::models::Com
     let tech_stack = c.tech_stack.join(", ");
     let hiring_str = if c.hiring { "YES" } else { "NO" };
     let email_str = c.email.as_deref().unwrap_or("-");
-    let phone_str = c.phone.as_deref().unwrap_or("-");
     let contact_str = c.contact_url.as_deref().unwrap_or("-");
     let linkedin_str = c.linkedin_url.as_deref().unwrap_or("-");
     let last_crawled_str = c.last_crawled.as_deref().unwrap_or("-");
@@ -202,24 +198,23 @@ fn write_company_row(worksheet: &mut Worksheet, row: u32, c: &crate::models::Com
     worksheet.write_string(row, 5, city_str)?;
     worksheet.write_string(row, 6, industry_str)?;
     worksheet.write_string(row, 7, email_str)?;
-    worksheet.write_string(row, 8, phone_str)?;
-    worksheet.write_string(row, 9, contact_str)?;
-    worksheet.write_string(row, 10, linkedin_str)?;
-    worksheet.write_string(row, 11, hiring_str)?;
-    worksheet.write_number(row, 12, c.engineering_jobs as f64)?;
-    worksheet.write_number(row, 13, c.remote_jobs as f64)?;
-    worksheet.write_number(row, 14, c.outsourcing_keywords as f64)?;
+    worksheet.write_string(row, 8, contact_str)?;
+    worksheet.write_string(row, 9, linkedin_str)?;
+    worksheet.write_string(row, 10, hiring_str)?;
+    worksheet.write_number(row, 11, c.engineering_jobs as f64)?;
+    worksheet.write_number(row, 12, c.remote_jobs as f64)?;
+    worksheet.write_number(row, 13, c.outsourcing_keywords as f64)?;
     
     if let Some(f) = fmt {
-        worksheet.write_number_with_format(row, 15, c.lead_score as f64, f)?;
-        worksheet.write_string_with_format(row, 16, &c.priority_tier, f)?;
+        worksheet.write_number_with_format(row, 14, c.lead_score as f64, f)?;
+        worksheet.write_string_with_format(row, 15, &c.priority_tier, f)?;
     } else {
-        worksheet.write_number(row, 15, c.lead_score as f64)?;
-        worksheet.write_string(row, 16, &c.priority_tier)?;
+        worksheet.write_number(row, 14, c.lead_score as f64)?;
+        worksheet.write_string(row, 15, &c.priority_tier)?;
     }
 
-    worksheet.write_string(row, 17, &tech_stack)?;
-    worksheet.write_string(row, 18, last_crawled_str)?;
+    worksheet.write_string(row, 16, &tech_stack)?;
+    worksheet.write_string(row, 17, last_crawled_str)?;
 
     Ok(())
 }

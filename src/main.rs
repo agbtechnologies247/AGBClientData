@@ -2,7 +2,6 @@ mod api;
 mod campaign;
 mod crawler;
 mod db;
-mod discovery;
 mod exporter;
 mod investor_matching;
 mod models;
@@ -17,7 +16,6 @@ mod validator;
 use api::{create_router, AppState};
 use crawler::AntiBlockingCrawler;
 use db::Database;
-use discovery::AutoSeedDiscovery;
 use proxy::ProxyManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -49,7 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proxy_mgr = ProxyManager::new(initial_proxies);
 
     let crawler = Arc::new(AntiBlockingCrawler::new(db.clone(), proxy_mgr.clone()));
-    let discovery = Arc::new(AutoSeedDiscovery::new(db.clone()));
 
     let crawler_daemon = crawler.clone();
     tokio::spawn(async move {
@@ -61,7 +58,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db,
         proxy_mgr,
         crawler,
-        discovery,
     };
 
     let cors = CorsLayer::new()

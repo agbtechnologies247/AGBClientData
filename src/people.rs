@@ -89,7 +89,7 @@ impl DecisionMakerEngine {
                         normalized_role: role,
                         decision_maker_score: score,
                         public_email: Some(format!("cto@{}", domain)),
-                        phone: None,
+
                         linkedin_url: Some(href.to_string()),
                         confidence_score: 90,
                     });
@@ -111,7 +111,7 @@ impl DecisionMakerEngine {
                 normalized_role: role,
                 decision_maker_score: score,
                 public_email: Some(format!("cto@{}", domain)),
-                phone: None,
+
                 linkedin_url: Some(format!("https://linkedin.com/company/{}", domain.split('.').next().unwrap_or(domain))),
                 confidence_score: 92,
             });

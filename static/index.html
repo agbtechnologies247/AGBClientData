@@ -33,9 +33,9 @@
                     <i class="fa-solid fa-kanban"></i>
                     <span>Leads Pipeline (Stages)</span>
                 </a>
-                <a href="#" class="nav-item" data-tab="discovery">
-                    <i class="fa-solid fa-compass"></i>
-                    <span>Discovery & Seed Manager</span>
+                <a href="#" class="nav-item" data-tab="investors">
+                    <i class="fa-solid fa-sack-dollar"></i>
+                    <span>Verified B2B SaaS & AI Investors</span>
                 </a>
                 <a href="#" class="nav-item" data-tab="people">
                     <i class="fa-solid fa-user-tie"></i>
@@ -44,10 +44,6 @@
                 <a href="#" class="nav-item" data-tab="campaigns">
                     <i class="fa-solid fa-paper-plane"></i>
                     <span>Outreach Campaigns</span>
-                </a>
-                <a href="#" class="nav-item" data-tab="investors">
-                    <i class="fa-solid fa-sack-dollar"></i>
-                    <span>Investor Intelligence</span>
                 </a>
                 <a href="#" class="nav-item" data-tab="crawler">
                     <i class="fa-solid fa-spider"></i>
@@ -84,8 +80,8 @@
                     <p>Automated discovery, anti-blocking extraction & decision maker intelligence</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-secondary" id="btnAutoSeed">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Live Auto Seeds
+                    <button class="btn btn-secondary" id="btnClearDatabaseBtn" style="color:var(--status-danger); border-color:#FECACA; background:#FEF2F2;">
+                        <i class="fa-solid fa-trash-can"></i> Clear & Reset Data
                     </button>
                     <button class="btn btn-secondary" id="btnToggleCrawler">
                         <i class="fa-solid fa-play"></i> Start Crawler
@@ -122,7 +118,7 @@
                 <div class="stat-card">
                     <div class="stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></div>
                     <div class="stat-info">
-                        <span class="stat-label">SaaS & AI Investors</span>
+                        <span class="stat-label">Verified SaaS & AI Investors</span>
                         <h3 id="statTotalInvestors">0</h3>
                     </div>
                 </div>
@@ -158,7 +154,7 @@
                             <input type="checkbox" id="filterHiringOnly"> Hiring Companies Only
                         </label>
                         <label>
-                            <input type="checkbox" id="filterHasEmail" checked> Verified Email / Phone Only
+                            <input type="checkbox" id="filterHasEmail" checked> Verified Email Only
                         </label>
                     </div>
                     <button class="btn btn-secondary btn-icon" id="btnRefreshLeads" title="Refresh Leads">
@@ -169,7 +165,7 @@
                 <!-- Leads Table Card -->
                 <div class="card table-card">
                     <div class="card-header">
-                        <h3>Verified Target Companies (With Contact Email/Phone)</h3>
+                        <h3>Verified Target Companies (With Contact Email)</h3>
                         <span class="badge" id="leadsCountBadge">Showing 0 companies</span>
                     </div>
                     <div class="table-responsive">
@@ -182,7 +178,7 @@
                                     <th>Market</th>
                                     <th>Lead Score</th>
                                     <th>Priority Tier</th>
-                                    <th>Email & Phone (Ring Verified)</th>
+                                    <th>Verified Business Email</th>
                                     <th>1-Click Copy</th>
                                     <th>Hiring & Tech Stack</th>
                                     <th>Actions</th>
@@ -213,34 +209,70 @@
                 </div>
             </div>
 
-            <!-- Tab: Discovery & Seed Manager -->
-            <div class="tab-content" id="tabDiscovery">
-                <div class="grid-2">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3><i class="fa-solid fa-compass text-accent"></i> Seed Discovery & Matrix Control</h3>
-                        </div>
-                        <div style="padding:24px;">
-                            <p style="color:var(--text-secondary); margin-bottom:16px;">The Live Discovery Engine dynamically generates queries across 30 countries, 25 IT industries, and 100+ global tech cities (>2,250,000 queries total).</p>
-                            <div style="display:flex; flex-direction:column; gap:12px;">
-                                <button class="btn btn-primary" id="btnTriggerAutoSeeds"><i class="fa-solid fa-wand-magic-sparkles"></i> Synthesize 25+ Seed Target URLs Now</button>
-                                <button class="btn btn-secondary" id="btnResetExecutedQueries"><i class="fa-solid fa-rotate"></i> Reset Executed Query Matrix Table</button>
-                                <button class="btn btn-secondary" id="btnClearDatabaseBtn" style="color:var(--status-danger); border-color:#FECACA; background:#FEF2F2;"><i class="fa-solid fa-trash-can"></i> Clear Database & Restart Full Fresh Crawl</button>
-                            </div>
-                        </div>
+            <!-- Tab: Investor Intelligence & Matching Engine -->
+            <div class="tab-content" id="tabInvestors">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-robot text-accent"></i> Automated AI Matching Engine for AGB Technologies</h3>
+                        <button class="btn btn-primary" id="btnRunAGBMatch"><i class="fa-solid fa-bolt"></i> Run Investor Match for AGB Tech</button>
                     </div>
+                    <p style="color:var(--text-secondary); font-size:12px; margin-bottom:16px;">
+                        Matches AGB Technologies criteria (B2B SaaS, AI, Enterprise Automation, India market, Seed stage $250K-$2M) against verified angel investors and funds to calculate instant match scores.
+                    </p>
+                </div>
 
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Direct B2B Domain Batch Uploader</h3>
-                        </div>
-                        <div style="padding:24px;">
-                            <div class="form-group" style="margin-bottom:16px;">
-                                <label>Target Company Domains (One per line)</label>
-                                <textarea id="customSeedDomains" rows="6" placeholder="e.g.&#10;apexsystems.com&#10;blueskytech.co.uk&#10;nexuslabs.io"></textarea>
-                            </div>
-                            <button class="btn btn-secondary" id="btnEnqueueCustomSeeds"><i class="fa-solid fa-plus"></i> Enqueue Seed Batch to Crawler Queue</button>
-                        </div>
+                <div class="filter-bar card">
+                    <div class="filter-group search">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="filterInvSearch" placeholder="Search investor name, focus, portfolio...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Investor Type</label>
+                        <select id="filterInvType">
+                            <option value="ALL">All Types</option>
+                            <option value="Micro VC">Micro VC</option>
+                            <option value="Syndicate">Syndicate</option>
+                            <option value="Angel Group">Angel Group</option>
+                            <option value="Family Office">Family Office</option>
+                            <option value="Accelerator">Accelerator</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Focus Sector</label>
+                        <select id="filterInvFocus">
+                            <option value="ALL">All Sectors</option>
+                            <option value="B2B SaaS">B2B SaaS</option>
+                            <option value="AI">AI / Automation</option>
+                            <option value="Enterprise">Enterprise Software</option>
+                            <option value="India">India Focus</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" id="btnExportInvestors"><i class="fa-solid fa-file-excel"></i> Export Investors (.xlsx)</button>
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-header">
+                        <h3>Verified B2B SaaS & AI Investors</h3>
+                        <span class="badge" id="investorCountBadge">0 investors</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Investor / Fund</th>
+                                    <th>Type & Market</th>
+                                    <th>Match Score</th>
+                                    <th>Check Size</th>
+                                    <th>Contact Email</th>
+                                    <th>1-Click Copy</th>
+                                    <th>Focus Sectors</th>
+                                    <th>Portfolio Highlights</th>
+                                </tr>
+                            </thead>
+                            <tbody id="investorTableBody">
+                                <!-- Dynamic Investors -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -278,7 +310,6 @@
                                     <th>AI Buyer Rank</th>
                                     <th>Role Classification</th>
                                     <th>Public Email</th>
-                                    <th>Phone</th>
                                     <th>1-Click Copy</th>
                                     <th>LinkedIn Profile</th>
                                 </tr>
@@ -358,74 +389,6 @@ support@agbtechnologies.com</textarea>
                 </div>
             </div>
 
-            <!-- Tab: Investor Intelligence & Matching Engine -->
-            <div class="tab-content" id="tabInvestors">
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fa-solid fa-robot text-accent"></i> Automated AI Matching Engine for AGB Technologies</h3>
-                        <button class="btn btn-primary" id="btnRunAGBMatch"><i class="fa-solid fa-bolt"></i> Run Investor Match for AGB Tech</button>
-                    </div>
-                    <p style="color:var(--text-secondary); font-size:12px; margin-bottom:16px;">
-                        Matches AGB Technologies criteria (B2B SaaS, AI, Enterprise Automation, India market, Seed stage $250K-$2M) against verified angel investors and funds to calculate instant match scores.
-                    </p>
-                </div>
-
-                <div class="filter-bar card">
-                    <div class="filter-group search">
-                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                        <input type="text" id="filterInvSearch" placeholder="Search investor name, focus, portfolio...">
-                    </div>
-                    <div class="filter-group">
-                        <label>Investor Type</label>
-                        <select id="filterInvType">
-                            <option value="ALL">All Types</option>
-                            <option value="Micro VC">Micro VC</option>
-                            <option value="Syndicate">Syndicate</option>
-                            <option value="Angel Group">Angel Group</option>
-                            <option value="Family Office">Family Office</option>
-                            <option value="Accelerator">Accelerator</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Focus Sector</label>
-                        <select id="filterInvFocus">
-                            <option value="ALL">All Sectors</option>
-                            <option value="B2B SaaS">B2B SaaS</option>
-                            <option value="AI">AI / Automation</option>
-                            <option value="Enterprise">Enterprise Software</option>
-                            <option value="India">India Focus</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary" id="btnExportInvestors"><i class="fa-solid fa-file-excel"></i> Export Investors (.xlsx)</button>
-                </div>
-
-                <div class="card table-card">
-                    <div class="card-header">
-                        <h3>Verified B2B SaaS & AI Investors</h3>
-                        <span class="badge" id="investorCountBadge">0 investors</span>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Investor / Fund</th>
-                                    <th>Type & Market</th>
-                                    <th>Match Score</th>
-                                    <th>Check Size</th>
-                                    <th>Contact Info</th>
-                                    <th>1-Click Copy</th>
-                                    <th>Focus Sectors</th>
-                                    <th>Portfolio Highlights</th>
-                                </tr>
-                            </thead>
-                            <tbody id="investorTableBody">
-                                <!-- Dynamic Investors -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <!-- Tab: Anti-Blocking Crawler Config -->
             <div class="tab-content" id="tabCrawler">
                 <div class="grid-2">
@@ -466,14 +429,13 @@ support@agbtechnologies.com</textarea>
 
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fa-solid fa-seedling"></i> Discovery & Seed Manager</h3>
+                            <h3><i class="fa-solid fa-spider"></i> Target Domain Manager</h3>
                         </div>
                         <div class="form-group">
                             <label>Target Seed URLs (One per line)</label>
-                            <textarea id="seedUrlsArea" rows="6" placeholder="https://company1.com&#10;https://company2.co.uk"></textarea>
+                            <textarea id="seedUrlsArea" rows="6" placeholder="https://thoughtworks.com&#10;https://epam.com"></textarea>
                         </div>
                         <div class="button-row">
-                            <button class="btn btn-secondary" id="btnTriggerAutoSeeds"><i class="fa-solid fa-robot"></i> Run Auto Seed Discovery</button>
                             <button class="btn btn-primary" id="btnLaunchCrawl"><i class="fa-solid fa-play"></i> Launch Crawl Engine</button>
                         </div>
                     </div>

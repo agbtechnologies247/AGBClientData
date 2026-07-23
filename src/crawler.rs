@@ -1,5 +1,4 @@
 use crate::db::Database;
-use crate::discovery::AutoSeedDiscovery;
 use crate::models::{Company, CrawlerSettings};
 use crate::parser::{extract_domain, parse_html};
 use crate::people::DecisionMakerEngine;
@@ -55,17 +54,29 @@ impl AntiBlockingCrawler {
         self.is_running.store(false, Ordering::SeqCst);
     }
 
-    /// Continuous Infinite Daemon Loop: automatically discovers fresh target URLs and crawls 24/7
+    /// Continuous Infinite Daemon Loop: target B2B IT & Service companies 24/7
     pub async fn start_daemon_loop(&self) {
-        let discovery = AutoSeedDiscovery::new(self.db.clone());
-        let _ = self.db.log_event("INFO", "DAEMON", "Continuous 24/7 Market Discovery & Crawl Daemon activated.");
+        let _ = self.db.log_event("INFO", "DAEMON", "Continuous 24/7 Market Lead Intelligence Crawl Daemon activated.");
+
+        let default_seeds = vec![
+            "https://thoughtworks.com".to_string(),
+            "https://endava.com".to_string(),
+            "https://epam.com".to_string(),
+            "https://globant.com".to_string(),
+            "https://kinandcarta.com".to_string(),
+            "https://nearform.com".to_string(),
+            "https://boldare.com".to_string(),
+            "https://eleks.com".to_string(),
+            "https://bairesdev.com".to_string(),
+            "https://netguru.com".to_string(),
+            "https://turing.com".to_string(),
+            "https://toptal.com".to_string(),
+            "https://arc.dev".to_string(),
+        ];
 
         loop {
             if !self.is_running() {
-                let seeds = discovery.discover_live_seeds(None).await;
-                if !seeds.is_empty() {
-                    self.start_crawl(seeds, Some("stealth".to_string())).await;
-                }
+                self.start_crawl(default_seeds.clone(), Some("stealth".to_string())).await;
             }
             sleep(Duration::from_secs(60)).await;
         }
@@ -112,7 +123,7 @@ impl AntiBlockingCrawler {
         let current_domain_store = self.current_domain.clone();
 
         tokio::spawn(async move {
-            let _ = db.log_event("INFO", "CRAWLER", &format!("Starting async bounded crawler session with {} seed targets (Concurrency: {})", seed_urls.len(), concurrency));
+            let _ = db.log_event("INFO", "CRAWLER", &format!("Starting async email-focused crawler session with {} target seeds (Concurrency: {})", seed_urls.len(), concurrency));
 
             let visited_in_session = Arc::new(tokio::sync::Mutex::new(HashSet::new()));
 
@@ -168,7 +179,6 @@ impl AntiBlockingCrawler {
                         };
 
                         let mut all_emails = HashSet::new();
-                        let mut all_phones = HashSet::new();
                         let mut contact_subpage = None;
                         let mut linkedin_url = None;
                         let mut hiring_signals = Vec::new();
@@ -197,7 +207,6 @@ impl AntiBlockingCrawler {
                                             let parsed = parse_html(&crawl_target, &html);
 
                                             for e in parsed.emails { all_emails.insert(e); }
-                                            for p in parsed.phones { all_phones.insert(p); }
                                             if parsed.linkedin_url.is_some() && linkedin_url.is_none() { linkedin_url = parsed.linkedin_url; }
                                             if parsed.contact_url.is_some() && contact_subpage.is_none() { contact_subpage = parsed.contact_url; }
                                             
@@ -206,13 +215,6 @@ impl AntiBlockingCrawler {
                                             remote_jobs += parsed.remote_jobs;
                                             outsourcing_keywords += parsed.outsourcing_keywords;
                                             for t in parsed.tech_stack { if !tech_stack.contains(&t) { tech_stack.push(t); } }
-
-                                            // Graph Crawl: Enqueue discovered external target domains
-                                            for ext_url in parsed.external_links {
-                                                if let Some(ext_dom) = extract_domain(&ext_url) {
-                                                    let _ = db.enqueue_domain(&ext_dom, &ext_url);
-                                                }
-                                            }
 
                                             let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
                                             for p in &people {
@@ -227,7 +229,6 @@ impl AntiBlockingCrawler {
                         }
 
                         let primary_email = all_emails.iter().next().cloned();
-                        let raw_phone = all_phones.iter().next().cloned();
 
                         let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
                             "UK".to_string()
@@ -240,13 +241,10 @@ impl AntiBlockingCrawler {
 
                         let val_res = validator.validate_contact_confidence(
                             primary_email.as_deref(),
-                            raw_phone.as_deref(),
                             &domain,
                             contact_subpage.is_some(),
                             true,
                         ).await;
-
-                        let normalized_phone = val_res.phone_e164.or(raw_phone);
 
                         let (person_name, person_pos) = if !extracted_people.is_empty() {
                             (Some(extracted_people[0].name.clone()), Some(extracted_people[0].title.clone()))
@@ -263,7 +261,6 @@ impl AntiBlockingCrawler {
                             city: None,
                             industry: Some("Software & IT Services".to_string()),
                             email: primary_email.clone(),
-                            phone: normalized_phone,
                             contact_url: contact_subpage.or_else(|| Some(format!("https://{}/contact", domain))),
                             linkedin_url,
                             hiring: !hiring_signals.is_empty(),
@@ -285,9 +282,6 @@ impl AntiBlockingCrawler {
                         if company.email.is_none() || company.email.as_ref().unwrap().trim().is_empty() {
                             company.email = Some(format!("contact@{}", domain));
                         }
-                        if company.phone.is_none() || company.phone.as_ref().unwrap().trim().is_empty() {
-                            company.phone = Some(format!("+1 (555) 010-{}", (rand::random::<u16>() % 9000 + 1000)));
-                        }
                         let _ = db.save_company(&company);
 
                         if pages_crawled > 0 {
@@ -299,7 +293,7 @@ impl AntiBlockingCrawler {
                         let _ = db.log_event(
                             "SUCCESS",
                             &domain,
-                            &format!("Crawled & saved lead! Score: {} | Emails: {:?}", company.lead_score, company.email),
+                            &format!("Crawled & saved email lead! Score: {} | Email: {:?}", company.lead_score, company.email),
                         );
 
                         let delay = {

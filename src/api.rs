@@ -1,7 +1,6 @@
 use crate::campaign::CreateCampaignRequest;
 use crate::crawler::AntiBlockingCrawler;
 use crate::db::Database;
-use crate::discovery::AutoSeedDiscovery;
 use crate::exporter::{generate_excel_export, generate_investor_excel_export, generate_people_excel_export};
 use crate::investor_matching::match_investor;
 use crate::models::{AddProxyRequest, CrawlSeedRequest, InvestorFilter, InvestorMatchRequest, LeadFilter, PersonFilter};
@@ -21,7 +20,6 @@ pub struct AppState {
     pub db: Database,
     pub proxy_mgr: ProxyManager,
     pub crawler: Arc<AntiBlockingCrawler>,
-    pub discovery: Arc<AutoSeedDiscovery>,
 }
 
 pub fn create_router(state: AppState) -> Router {
@@ -38,8 +36,6 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/investors/export", get(export_investors_handler))
         .route("/api/crawler/start", post(start_crawler_handler))
         .route("/api/crawler/stop", post(stop_crawler_handler))
-        .route("/api/crawler/auto-seeds", post(auto_discover_seeds_handler))
-        .route("/api/crawler/reset-queries", post(reset_queries_handler))
         .route("/api/crawler/clear-database", post(clear_database_handler))
         .route("/api/proxies", get(get_proxies_handler).post(add_proxies_handler))
         .route("/api/logs", get(get_logs_handler))
@@ -241,7 +237,13 @@ async fn start_crawler_handler(
     let req = payload.map(|p| p.0).unwrap_or_default();
     let mut seeds = req.seed_urls;
     if seeds.is_empty() {
-        seeds = state.discovery.discover_live_seeds(None).await;
+        seeds = vec![
+            "https://thoughtworks.com".to_string(),
+            "https://endava.com".to_string(),
+            "https://epam.com".to_string(),
+            "https://globant.com".to_string(),
+            "https://kinandcarta.com".to_string(),
+        ];
     }
 
     state.crawler.start_crawl(seeds.clone(), req.mode).await;
@@ -259,33 +261,6 @@ async fn start_crawler_handler(
 async fn stop_crawler_handler(State(state): State<AppState>) -> Response {
     state.crawler.stop();
     (StatusCode::OK, Json(json!({"status": "STOPPED"}))).into_response()
-}
-
-async fn auto_discover_seeds_handler(State(state): State<AppState>) -> Response {
-    let seeds = state.discovery.discover_live_seeds(None).await;
-    (
-        StatusCode::OK,
-        Json(json!({
-            "count": seeds.len(),
-            "seeds": seeds
-        })),
-    )
-        .into_response()
-}
-
-async fn reset_queries_handler(State(state): State<AppState>) -> Response {
-    match state.db.clear_executed_queries() {
-        Ok(count) => (
-            StatusCode::OK,
-            Json(json!({"status": "SUCCESS", "cleared_queries": count})),
-        )
-            .into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({"error": e.to_string()})),
-        )
-            .into_response(),
-    }
 }
 
 async fn get_proxies_handler(State(state): State<AppState>) -> Response {
@@ -419,7 +394,7 @@ async fn export_investors_handler(
 async fn clear_database_handler(State(state): State<AppState>) -> Response {
     state.crawler.stop();
     match state.db.clear_all_data() {
-        Ok(_) => (StatusCode::OK, Json(json!({"status": "success", "message": "Database wiped successfully. Ready for fresh crawl."}))).into_response(),
+        Ok(_) => (StatusCode::OK, Json(json!({"status": "success", "message": "Database wiped successfully. Baseline leads restored."}))).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
     }
 }

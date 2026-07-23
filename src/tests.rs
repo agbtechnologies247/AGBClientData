@@ -5,15 +5,13 @@ mod tests {
     use crate::parser::parse_html;
     use crate::people::DecisionMakerEngine;
     use crate::score::calculate_score;
-    use crate::validator::ContactValidator;
 
     #[test]
-    fn test_parser_email_and_phone_extraction() {
+    fn test_parser_email_extraction() {
         let html = r#"
             <html>
                 <body>
                     <p>Contact our engineering team at contact@acmesoftware.com or support@acmesoftware.com</p>
-                    <p>Call US Sales: +1 (212) 555-0199 or UK Office: +44 20 7946 0912</p>
                     <a href="https://linkedin.com/company/acme-software">LinkedIn Profile</a>
                     <p>We're hiring React, Node.js, and Python engineers for remote team positions!</p>
                 </body>
@@ -55,7 +53,6 @@ mod tests {
             city: None,
             industry: Some("Software".to_string()),
             email: Some("contact@testcorp.com".to_string()),
-            phone: Some("+12125550199".to_string()),
             contact_url: Some("https://testcorp.com/contact".to_string()),
             linkedin_url: Some("https://linkedin.com/company/testcorp".to_string()),
             hiring: true,
@@ -91,7 +88,6 @@ mod tests {
             stages: vec!["Seed".to_string()],
             check_size: Some("$250K - $1M".to_string()),
             public_email: Some("invest@saascapital.com".to_string()),
-            phone: None,
             linkedin_url: None,
             portfolio_highlights: vec!["Freshworks".to_string()],
             recent_investments: 5,

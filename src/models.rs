@@ -10,7 +10,6 @@ pub struct Company {
     pub city: Option<String>,
     pub industry: Option<String>,
     pub email: Option<String>,
-    pub phone: Option<String>,
     pub contact_url: Option<String>,
     pub linkedin_url: Option<String>,
     pub hiring: bool,
@@ -42,7 +41,6 @@ pub struct Person {
     pub normalized_role: String, // "Technology Executive", "Engineering Leadership", "Executive Management"
     pub decision_maker_score: i32, // 0 - 100
     pub public_email: Option<String>,
-    pub phone: Option<String>,
     pub linkedin_url: Option<String>,
     pub confidence_score: i32,
 }
@@ -75,7 +73,6 @@ pub struct Investor {
     pub stages: Vec<String>,
     pub check_size: Option<String>,
     pub public_email: Option<String>,
-    pub phone: Option<String>,
     pub linkedin_url: Option<String>,
     pub portfolio_highlights: Vec<String>,
     pub recent_investments: usize,
@@ -148,7 +145,6 @@ pub struct CrawlerStats {
     pub medium_intent_leads: usize,
     pub hiring_companies: usize,
     pub leads_with_email: usize,
-    pub leads_with_phone: usize,
     pub total_decision_makers: usize,
     pub total_investors: usize,
     pub tier1_investors: usize,
@@ -202,4 +198,17 @@ pub struct CrawlLogEntry {
     pub level: String,
     pub domain: String,
     pub message: String,
+}
+
+// SOLID Principles - Abstraction Interfaces
+pub trait EmailValidatorTrait: Send + Sync {
+    fn validate_email(&self, email: &str) -> bool;
+}
+
+pub trait LeadScorerTrait: Send + Sync {
+    fn score_company(&self, company: &mut Company, signals: &[String]);
+}
+
+pub trait InvestorMatcherTrait: Send + Sync {
+    fn match_investor(&self, investor: &Investor, request: &InvestorMatchRequest) -> InvestorMatchResult;
 }
