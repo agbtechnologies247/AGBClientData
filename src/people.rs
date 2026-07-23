@@ -1,16 +1,16 @@
-use crate::models::Person;
+use crate::models::{ExecutiveExtractorTrait, Person};
 use regex::Regex;
 use scraper::{Html, Selector};
 use std::collections::HashSet;
 
-pub struct DecisionMakerEngine;
+/// SRP: Responsible strictly for executive title normalization and buying rank scoring
+pub struct TitleNormalizer;
 
-impl DecisionMakerEngine {
-    /// Classifies titles and calculates decision-maker buying probability score (0 - 100)
+impl TitleNormalizer {
     pub fn classify_title(title_raw: &str) -> (i32, String) {
         let lower = title_raw.to_lowercase();
 
-        // 1. Executive Leadership
+        // 1. Executive Technology Leadership (Score: 95-100)
         if lower.contains("cto") || lower.contains("chief technology officer") {
             return (100, "Technology Executive".to_string());
         }
@@ -24,7 +24,7 @@ impl DecisionMakerEngine {
             return (88, "Executive Management".to_string());
         }
 
-        // 2. Engineering & IT Management
+        // 2. Engineering & Infrastructure Leadership (Score: 90-95)
         if lower.contains("vp of engineering") || lower.contains("vp engineering") || lower.contains("vice president of engineering") || lower.contains("vp of technology") {
             return (95, "Engineering Leadership".to_string());
         }
@@ -41,7 +41,7 @@ impl DecisionMakerEngine {
             return (82, "Engineering Management".to_string());
         }
 
-        // 3. Operations & Procurement
+        // 3. Procurement, Product & Operations (Score: 80-88)
         if lower.contains("director of procurement") || lower.contains("procurement director") || lower.contains("head of procurement") {
             return (88, "Procurement Leadership".to_string());
         }
@@ -57,9 +57,13 @@ impl DecisionMakerEngine {
 
         (50, "General Management".to_string())
     }
+}
 
-    /// Parses team and about pages to extract decision maker names, titles, emails, and LinkedIn URLs
-    pub fn extract_people_from_html(html: &str, domain: &str, company_name: &str) -> Vec<Person> {
+/// SRP: Responsible for extracting executive profiles from raw HTML DOM
+pub struct ExecutiveParser;
+
+impl ExecutiveParser {
+    pub fn parse_html(html: &str, domain: &str, company_name: &str) -> Vec<Person> {
         let document = Html::parse_document(html);
         let mut people = Vec::new();
         let mut seen_names = HashSet::new();
@@ -74,7 +78,7 @@ impl DecisionMakerEngine {
                     seen_names.insert(text.clone());
 
                     let sample_title = "Chief Technology Officer / VP of Engineering".to_string();
-                    let (score, role) = Self::classify_title(&sample_title);
+                    let (score, role) = TitleNormalizer::classify_title(&sample_title);
 
                     people.push(Person {
                         id: 0,
@@ -93,7 +97,7 @@ impl DecisionMakerEngine {
             }
         }
 
-        // Executive team generator for discovered target domain
+        // Executive team generator for discovered target domain if team cards absent
         if people.is_empty() {
             let roles = vec![
                 ("Chief Technology Officer (CTO)", "Technology Executive", 100, "cto"),
@@ -106,10 +110,10 @@ impl DecisionMakerEngine {
             for (idx, (title, role_name, score, prefix)) in roles.into_iter().enumerate() {
                 let first_names = ["Alex", "David", "Sarah", "Michael", "Elena", "James", "Rachel", "Marcus"];
                 let last_names = ["Rivera", "Miller", "Vance", "Chen", "Sovereign", "Kovacs", "Thornton", "Patel"];
-                
+
                 let fn_idx = (domain.len() + idx) % first_names.len();
                 let ln_idx = (company_slug.len() + idx * 3) % last_names.len();
-                
+
                 let full_name = format!("{} {}", first_names[fn_idx], last_names[ln_idx]);
 
                 people.push(Person {
@@ -129,5 +133,33 @@ impl DecisionMakerEngine {
         }
 
         people
+    }
+}
+
+/// OCP & DIP Implementation of ExecutiveExtractorTrait
+pub struct SolidExecutiveExtractor;
+
+impl SolidExecutiveExtractor {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl ExecutiveExtractorTrait for SolidExecutiveExtractor {
+    fn extract_executives(&self, html: &str, domain: &str, company_name: &str) -> Vec<Person> {
+        ExecutiveParser::parse_html(html, domain, company_name)
+    }
+}
+
+pub struct DecisionMakerEngine;
+
+impl DecisionMakerEngine {
+    pub fn classify_title(title_raw: &str) -> (i32, String) {
+        TitleNormalizer::classify_title(title_raw)
+    }
+
+    pub fn extract_people_from_html(html: &str, domain: &str, company_name: &str) -> Vec<Person> {
+        let extractor = SolidExecutiveExtractor::new();
+        extractor.extract_executives(html, domain, company_name)
     }
 }

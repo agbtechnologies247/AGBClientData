@@ -212,3 +212,7 @@ pub trait LeadScorerTrait: Send + Sync {
 pub trait InvestorMatcherTrait: Send + Sync {
     fn match_investor(&self, investor: &Investor, request: &InvestorMatchRequest) -> InvestorMatchResult;
 }
+
+pub trait ExecutiveExtractorTrait: Send + Sync {
+    fn extract_executives(&self, html: &str, domain: &str, company_name: &str) -> Vec<Person>;
+}

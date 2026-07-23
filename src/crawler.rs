@@ -72,13 +72,78 @@ impl AntiBlockingCrawler {
             "https://turing.com".to_string(),
             "https://toptal.com".to_string(),
             "https://arc.dev".to_string(),
+            "https://datadoghq.com".to_string(),
+            "https://snowflake.com".to_string(),
+            "https://mongodb.com".to_string(),
+            "https://atlassian.com".to_string(),
+            "https://stripe.com".to_string(),
+            "https://cloudflare.com".to_string(),
+            "https://twilio.com".to_string(),
+            "https://gitlab.com".to_string(),
+            "https://hashicorp.com".to_string(),
+            "https://crowdstrike.com".to_string(),
+            "https://palantir.com".to_string(),
+            "https://elastic.co".to_string(),
+            "https://confluent.io".to_string(),
+            "https://auth0.com".to_string(),
+            "https://postman.com".to_string(),
+            "https://vercel.com".to_string(),
+            "https://snyk.io".to_string(),
+            "https://fastly.com".to_string(),
+            "https://servicenow.com".to_string(),
+            "https://workday.com".to_string(),
+            "https://salesforce.com".to_string(),
+            "https://paloaltonetworks.com".to_string(),
+            "https://zscaler.com".to_string(),
+            "https://splunk.com".to_string(),
+            "https://newrelic.com".to_string(),
+            "https://pagerduty.com".to_string(),
+            "https://sentry.io".to_string(),
+            "https://launchdarkly.com".to_string(),
+            "https://segment.com".to_string(),
+            "https://mixpanel.com".to_string(),
+            "https://amplitude.com".to_string(),
+            "https://hubspot.com".to_string(),
+            "https://zendesk.com".to_string(),
+            "https://freshworks.com".to_string(),
+            "https://monday.com".to_string(),
+            "https://asana.com".to_string(),
+            "https://notion.so".to_string(),
+            "https://figma.com".to_string(),
         ];
 
         loop {
             if !self.is_running() {
-                self.start_crawl(default_seeds.clone(), Some("stealth".to_string())).await;
+                // 1. Pop un-crawled pending domains from SQLite queue
+                match self.db.pop_pending_queue_domains(15) {
+                    Ok(queued) if !queued.is_empty() => {
+                        let _ = self.db.log_event("INFO", "DAEMON", &format!("Popped {} pending domains from queue for continuous crawling.", queued.len()));
+                        self.start_crawl(queued, Some("stealth".to_string())).await;
+                    }
+                    _ => {
+                        // 2. Fallback: Filter seed list for any un-crawled seeds
+                        let uncrawled_seeds: Vec<String> = default_seeds.iter()
+                            .filter(|s| {
+                                if let Some(d) = extract_domain(s) {
+                                    !self.db.is_domain_crawled(&d).unwrap_or(false)
+                                } else {
+                                    false
+                                }
+                            })
+                            .cloned()
+                            .collect();
+
+                        if !uncrawled_seeds.is_empty() {
+                            let _ = self.db.log_event("INFO", "DAEMON", &format!("Launching batch of {} uncrawled seed targets.", uncrawled_seeds.len()));
+                            self.start_crawl(uncrawled_seeds, Some("stealth".to_string())).await;
+                        } else {
+                            // Cycle default seeds to refresh intelligence
+                            self.start_crawl(default_seeds.clone(), Some("stealth".to_string())).await;
+                        }
+                    }
+                }
             }
-            sleep(Duration::from_secs(60)).await;
+            sleep(Duration::from_secs(30)).await;
         }
     }
 
@@ -221,6 +286,15 @@ impl AntiBlockingCrawler {
                                                 let _ = db.save_person(p);
                                             }
                                             extracted_people.extend(people);
+
+                                            // Auto-enqueue external corporate links to expand 24/7 discovery pipeline
+                                            for ext_link in parsed.external_links {
+                                                if let Some(ext_domain) = extract_domain(&ext_link) {
+                                                    if !ext_domain.contains("facebook.com") && !ext_domain.contains("twitter.com") && !ext_domain.contains("youtube.com") && !ext_domain.contains("instagram.com") && !ext_domain.contains("google.com") && !ext_domain.contains("linkedin.com") && !ext_domain.contains("github.com") && ext_domain != domain {
+                                                        let _ = db.enqueue_domain(&ext_domain, &ext_link);
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
