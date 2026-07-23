@@ -74,8 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadPeople();
             }
             if (tabName === 'campaigns') {
-                pageHeading.innerText = 'Cold Email Outreach Campaigns & Automation';
-                loadCampaigns();
+                pageHeading.innerText = 'Hostinger Autonomous Cold Email Outreach & Automation';
+                loadOutreachHistory();
             }
             if (tabName === 'investors') {
                 pageHeading.innerText = 'Verified B2B SaaS & AI Investor Intelligence';
@@ -298,54 +298,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Fetch Email Campaigns
-    async function loadCampaigns() {
+    // Fetch Sent Emails Outreach History
+    async function loadOutreachHistory() {
         try {
-            const res = await fetch('/api/campaigns');
+            const res = await fetch('/api/outreach/history');
             const data = await res.json();
-            const tbody = document.getElementById('campaignTableBody');
+            const tbody = document.getElementById('outreachHistoryTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
-            data.campaigns.forEach(c => {
+            if (!data.outreach_history || data.outreach_history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No outreach emails dispatched yet. Hourly daemon active.</td></tr>`;
+                return;
+            }
+
+            data.outreach_history.forEach(item => {
                 const tr = document.createElement('tr');
+                const badgeClass = item.status === 'SENT' ? 'badge-high' : (item.status === 'REPLIED' ? 'badge-high' : 'badge-low');
                 tr.innerHTML = `
-                    <td><strong>${c.name}</strong></td>
-                    <td><span class="badge" style="background:rgba(99,102,241,0.2); color:#a5b4fc;">${c.target_role}</span></td>
-                    <td><span class="badge badge-high">${c.status}</span></td>
-                    <td>${c.total_recipients || 5}</td>
-                    <td>${c.sent_count || 5}</td>
-                    <td><strong style="color:#34d399;">${c.open_count || 3}</strong></td>
+                    <td><strong>${item.recipient_email}</strong></td>
+                    <td>${item.company_name}</td>
+                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                    <td>${item.sent_at.slice(0, 19).replace('T', ' ')}</td>
                 `;
                 tbody.appendChild(tr);
             });
         } catch (err) {
-            console.error("Error loading campaigns:", err);
+            console.error("Error loading outreach history:", err);
         }
     }
 
-    // Handle Create Campaign Form
-    document.getElementById('formCreateCampaign').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('campaignName').value;
-        const target_role = document.getElementById('campaignTargetRole').value;
-        const subject_template = document.getElementById('campaignSubject').value;
-        const body_template = document.getElementById('campaignBody').value;
-
-        try {
-            const res = await fetch('/api/campaigns', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, target_role, subject_template, body_template })
-            });
-
-            if (res.ok) {
-                showToast(`Campaign '${name}' created and queued!`);
-                loadCampaigns();
+    const btnTriggerOutreachBatch = document.getElementById('btnTriggerOutreachBatch');
+    if (btnTriggerOutreachBatch) {
+        btnTriggerOutreachBatch.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/outreach/trigger', { method: 'POST' });
+                const data = await res.json();
+                showToast("Hostinger SMTP outreach batch triggered!");
+                setTimeout(loadOutreachHistory, 2000);
+            } catch (err) {
+                alert("Error triggering outreach batch: " + err);
             }
-        } catch (err) {
-            alert("Error creating campaign: " + err);
-        }
-    });
+        });
+    }
+
+    const btnRefreshOutreachHistory = document.getElementById('btnRefreshOutreachHistory');
+    if (btnRefreshOutreachHistory) {
+        btnRefreshOutreachHistory.addEventListener('click', loadOutreachHistory);
+    }
 
     // Lead Detail Modal
     async function openLeadDetail(id) {

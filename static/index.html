@@ -327,61 +327,91 @@
                 <div class="grid-2">
                     <div class="card">
                         <div class="card-header">
-                            <h3><i class="fa-solid fa-paper-plane text-accent"></i> Create New Outreach Campaign</h3>
+                            <h3><i class="fa-solid fa-paper-plane text-accent"></i> Hostinger Autonomous Email Outreach Engine</h3>
+                            <span class="badge badge-high" style="background:#10B981;"><i class="fa-solid fa-circle-check"></i> Hostinger SMTP/IMAP Active</span>
                         </div>
-                        <form id="formCreateCampaign" class="form-grid">
-                            <div class="form-group">
-                                <label>Campaign Name</label>
-                                <input type="text" id="campaignName" placeholder="e.g. Q3 US CTO Outreach" required>
+                        <div style="padding:20px 24px;">
+                            <div style="background:var(--bg-subtle); border:1px solid var(--border-color); border-radius:10px; padding:16px; margin-bottom:16px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <strong style="color:var(--text-primary); font-size:14px;"><i class="fa-solid fa-server" style="color:var(--accent);"></i> Outgoing Server Config</strong>
+                                    <span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc;">Hourly Cron Daemon (1 Hour)</span>
+                                </div>
+                                <p style="font-size:12px; color:var(--text-secondary); margin:0;">
+                                    SMTP Sender: <strong>support@agbtechnologies.com</strong> (Bhramit Pardhi [Shubham])<br>
+                                    Server: <strong>smtp.hostinger.com:465 (SSL/TLS)</strong> | IMAP: <strong>imap.hostinger.com:993</strong><br>
+                                    Strict Guard: <strong>100% Unique Recipient Deduplication Enabled ✓</strong>
+                                </p>
                             </div>
-                            <div class="form-group">
-                                <label>Target Decision Maker Role</label>
-                                <select id="campaignTargetRole">
-                                    <option value="Technology Executive">Technology Executive (CTO / CIO)</option>
-                                    <option value="Engineering Leadership">Engineering Leadership (VP Eng)</option>
-                                    <option value="Executive Management">Executive Management (CEO / Founder)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Email Subject Line Template</label>
-                                <input type="text" id="campaignSubject" value="Question regarding {{Company}} software roadmap" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Email Body Template (HTML / Plaintext)</label>
-                                <textarea id="campaignBody" rows="7" required>Hi {{First_Name}},
 
-I saw your role as {{Title}} at {{Company}}.
+                            <form id="formCreateCampaign" class="form-grid">
+                                <div class="form-group">
+                                    <label>Campaign Name / Subject</label>
+                                    <input type="text" id="campaignSubject" value="Enterprise Operations & Business Management Platform Demo - AGB Technologies" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>A.L.F.R.E.D. & BillSoft Pitch Template (Pre-configured)</label>
+                                    <textarea id="campaignBody" rows="10" required>Dear Sir/Madam,
 
-We at AGB Technologies help engineering leaders scale dedicated software development teams and cloud infrastructure seamlessly.
+I hope this email finds you well.
 
-Would you be open to a 10-minute chat this Thursday to discuss your technical priorities for this quarter?
+My name is Bhramit Pardhi [Shubham], Founder of AGB Technologies.
 
-Best regards,
-AGB Technologies Team
-support@agbtechnologies.com</textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center;"><i class="fa-solid fa-paper-plane"></i> Send Email Campaign</button>
-                        </form>
+We have built and successfully deployed A.L.F.R.E.D. (Autonomous Lifecycle Framework for Resilient Enterprise Digitalization), an AI-powered enterprise operations platform that helps organizations automate IT operations, managed services, infrastructure management, user lifecycle, compliance, monitoring, and business workflows from a single intelligent platform.
+
+Live Production Demo:
+https://alfred.agbtechnologies.in/
+
+In addition, we have developed BillSoft, a modern cloud-based business management and billing platform suitable for SMEs and growing businesses.
+
+Live Production Demo:
+https://billsoft.agbtechnologies.com/
+
+We are currently looking to connect with organizations that may be interested in:
+
+* Becoming an early customer and leveraging our platform to reduce operational costs.
+* Exploring strategic partnerships or white-label opportunities.
+* Investing in or acquiring our enterprise software portfolio.
+
+If you're looking to modernize your operations, streamline business processes, or reduce infrastructure and support costs, we'd be delighted to demonstrate how A.L.F.R.E.D. and BillSoft can help your organization.
+
+Please let us know if you would like to become one of our customers. We would be happy to show you how A.L.F.R.E.D. can significantly reduce your operational costs while improving efficiency and visibility across your organization.
+
+I would be happy to share our pitch deck, product architecture, business model, financial projections, and provide demo account access upon request.
+
+Thank you for your time and consideration. I look forward to the opportunity to connect.
+
+Kind regards,
+
+Bhramit Pardhi [Shubham]
+Founder, AGB Technologies
+
+Email: agbtechnologies247@gmail.com
+Phone: +91 9049874780</textarea>
+                                </div>
+                                <button type="button" class="btn btn-primary" id="btnTriggerOutreachBatch" style="width:100%; justify-content:center; padding:12px;">
+                                    <i class="fa-solid fa-paper-plane"></i> Run Outreach Batch Now (Hostinger SMTP)
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
                     <div class="card table-card">
                         <div class="card-header">
-                            <h3>Active Email Outreach Campaigns</h3>
+                            <h3><i class="fa-solid fa-clock-rotate-left"></i> Sent Email History & Delivery Status</h3>
+                            <button class="btn btn-secondary btn-sm" id="btnRefreshOutreachHistory"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
                         </div>
                         <div class="table-responsive">
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Campaign Name</th>
-                                        <th>Target Role</th>
-                                        <th>Status</th>
-                                        <th>Recipients</th>
-                                        <th>Sent</th>
-                                        <th>Opened</th>
+                                        <th>Recipient Email</th>
+                                        <th>Company Name</th>
+                                        <th>Delivery Status</th>
+                                        <th>Dispatched Timestamp</th>
                                     </tr>
                                 </thead>
-                                <tbody id="campaignTableBody">
-                                    <!-- Dynamic Campaigns -->
+                                <tbody id="outreachHistoryTableBody">
+                                    <!-- Dynamic Sent Emails -->
                                 </tbody>
                             </table>
                         </div>

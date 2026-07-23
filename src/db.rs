@@ -135,6 +135,16 @@ impl Database {
                 last_updated TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS sent_emails_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient_email TEXT UNIQUE NOT NULL,
+                company_name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'SENT',
+                sent_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_sent_emails_email ON sent_emails_history(recipient_email);
+
             CREATE TABLE IF NOT EXISTS proxies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 url TEXT UNIQUE NOT NULL,
@@ -883,6 +893,102 @@ impl Database {
         Ok(urls)
     }
 
+    pub fn is_email_already_sent(&self, email: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM sent_emails_history WHERE recipient_email = ?1",
+            params![email.trim()],
+            |r| r.get(0),
+        ).unwrap_or(0);
+        Ok(count > 0)
+    }
+
+    pub fn record_sent_email_history(&self, email: &str, company_name: &str, status: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            "INSERT INTO sent_emails_history (recipient_email, company_name, status, sent_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(recipient_email) DO UPDATE SET status=excluded.status, sent_at=excluded.sent_at",
+            params![email.trim(), company_name, status, now],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_unsent_leads_batch(&self, limit: usize) -> Result<Vec<Company>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, domain, website, country, city, industry, email, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, contact_position, qualification_stage, last_crawled
+             FROM companies
+             WHERE email IS NOT NULL AND email != ''
+             AND email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             ORDER BY lead_score DESC, id DESC
+             LIMIT ?"
+        )?;
+
+        let company_iter = stmt.query_map(params![limit as i64], |row| {
+            let tech_stack_str: String = row.get(16)?;
+            let tech_stack: Vec<String> = serde_json::from_str(&tech_stack_str).unwrap_or_default();
+            let stage: String = row.get::<_, Option<String>>(19)?.unwrap_or_else(|| "DISCOVERED".to_string());
+            Ok(Company {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                domain: row.get(2)?,
+                website: row.get(3)?,
+                country: row.get(4)?,
+                city: row.get(5)?,
+                industry: row.get(6)?,
+                email: row.get(7)?,
+                contact_url: row.get(8)?,
+                linkedin_url: row.get(9)?,
+                hiring: row.get::<_, i32>(10)? == 1,
+                engineering_jobs: row.get(11)?,
+                remote_jobs: row.get(12)?,
+                outsourcing_keywords: row.get(13)?,
+                lead_score: row.get(14)?,
+                priority_tier: row.get(15)?,
+                tech_stack,
+                contact_person: row.get(17)?,
+                contact_position: row.get(18)?,
+                qualification_stage: stage,
+                last_crawled: row.get(20)?,
+            })
+        })?;
+
+        let mut leads = Vec::new();
+        for company in company_iter {
+            leads.push(company?);
+        }
+
+        Ok(leads)
+    }
+
+    pub fn get_sent_emails_history(&self, limit: usize) -> Result<Vec<(i64, String, String, String, String)>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, recipient_email, company_name, status, sent_at
+             FROM sent_emails_history
+             ORDER BY id DESC
+             LIMIT ?"
+        )?;
+
+        let rows = stmt.query_map(params![limit as i64], |r| {
+            Ok((
+                r.get::<_, i64>(0)?,
+                r.get::<_, String>(1)?,
+                r.get::<_, String>(2)?,
+                r.get::<_, String>(3)?,
+                r.get::<_, String>(4)?,
+            ))
+        })?;
+
+        let mut list = Vec::new();
+        for row in rows {
+            list.push(row?);
+        }
+        Ok(list)
+    }
+
     pub fn clear_all_data(&self) -> Result<()> {
         {
             let conn = self.conn.lock().unwrap();
@@ -891,6 +997,7 @@ impl Database {
             let _ = conn.execute("DELETE FROM investors", []);
             let _ = conn.execute("DELETE FROM campaigns", []);
             let _ = conn.execute("DELETE FROM outreach_emails", []);
+            let _ = conn.execute("DELETE FROM sent_emails_history", []);
             let _ = conn.execute("DELETE FROM proxies", []);
             let _ = conn.execute("DELETE FROM crawled_domains", []);
             let _ = conn.execute("DELETE FROM search_queries", []);

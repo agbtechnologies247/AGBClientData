@@ -34,6 +34,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/investors", get(get_investors_handler))
         .route("/api/investors/match", post(match_investors_handler))
         .route("/api/investors/export", get(export_investors_handler))
+        .route("/api/outreach/trigger", post(trigger_outreach_handler))
+        .route("/api/outreach/history", get(get_outreach_history_handler))
         .route("/api/crawler/start", post(start_crawler_handler))
         .route("/api/crawler/stop", post(stop_crawler_handler))
         .route("/api/crawler/clear-database", post(clear_database_handler))
@@ -396,5 +398,45 @@ async fn clear_database_handler(State(state): State<AppState>) -> Response {
     match state.db.clear_all_data() {
         Ok(_) => (StatusCode::OK, Json(json!({"status": "success", "message": "Database wiped successfully. Baseline leads restored."}))).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response(),
+    }
+}
+
+async fn trigger_outreach_handler(State(state): State<AppState>) -> Response {
+    let db = state.db.clone();
+    tokio::spawn(async move {
+        let _ = crate::campaign::CampaignEngine::dispatch_outreach_batch(&db, 15).await;
+    });
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "DISPATCHING",
+            "message": "Hostinger SMTP outreach batch triggered asynchronously."
+        })),
+    )
+        .into_response()
+}
+
+async fn get_outreach_history_handler(State(state): State<AppState>) -> Response {
+    match state.db.get_sent_emails_history(50) {
+        Ok(history) => {
+            let list: Vec<_> = history
+                .into_iter()
+                .map(|(id, email, company, status, sent_at)| {
+                    json!({
+                        "id": id,
+                        "recipient_email": email,
+                        "company_name": company,
+                        "status": status,
+                        "sent_at": sent_at
+                    })
+                })
+                .collect();
+            (StatusCode::OK, Json(json!({"outreach_history": list}))).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
     }
 }

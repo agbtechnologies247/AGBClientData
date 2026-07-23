@@ -126,4 +126,45 @@ mod tests {
         assert!(stats_after.total_decision_makers > 0, "Decision makers count after clear & re-seed should be > 0");
         assert!(stats_after.total_investors > 0, "Investors count after clear & re-seed should be > 0");
     }
+
+    #[test]
+    fn test_email_deduplication_guard() {
+        use crate::db::Database;
+        let db = Database::new(":memory:").expect("Failed to create in-memory database");
+
+        let test_email = "cto@apexsystems.com";
+        assert!(!db.is_email_already_sent(test_email).unwrap(), "Email should not be sent initially");
+
+        db.record_sent_email_history(test_email, "Apex Systems Solutions", "SENT").unwrap();
+        assert!(db.is_email_already_sent(test_email).unwrap(), "Email should be recorded as sent");
+
+        let history = db.get_sent_emails_history(10).unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].1, test_email);
+        assert_eq!(history[0].3, "SENT");
+    }
+
+    #[test]
+    fn test_alfred_billsoft_template_personalization() {
+        use crate::campaign::CampaignEngine;
+        let (subject, body) = CampaignEngine::default_alfred_billsoft_template();
+
+        assert!(subject.contains("Enterprise Operations"));
+        assert!(body.contains("A.L.F.R.E.D."));
+        assert!(body.contains("BillSoft"));
+        assert!(body.contains("Bhramit Pardhi [Shubham]"));
+        assert!(body.contains("agbtechnologies247@gmail.com"));
+        assert!(body.contains("+91 9049874780"));
+
+        let (personalized_sub, personalized_body) = CampaignEngine::personalize_template(
+            &subject,
+            &body,
+            "David Miller",
+            "Apex Systems Solutions",
+            "Chief Technology Officer",
+        );
+
+        assert_eq!(personalized_sub, subject);
+        assert!(personalized_body.contains("Bhramit Pardhi [Shubham]"));
+    }
 }

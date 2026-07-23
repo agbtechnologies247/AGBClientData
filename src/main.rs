@@ -54,6 +54,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         crawler_daemon.start_daemon_loop().await;
     });
 
+    let outreach_db = db.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        crate::campaign::CampaignEngine::start_hourly_outreach_daemon(outreach_db);
+    });
+
     let app_state = AppState {
         db,
         proxy_mgr,
