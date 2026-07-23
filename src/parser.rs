@@ -53,7 +53,9 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         if let Some(href) = element.value().attr("href") {
             if (href.contains("linkedin.com/company/") || href.contains("linkedin.com/in/")) && !href.contains("share") && linkedin_url.is_none() {
                 let clean_li = href.split('?').next().unwrap_or(href).to_string();
-                linkedin_url = Some(clean_li);
+                if crate::validator::ContactValidator::is_valid_linkedin_url(&clean_li) {
+                    linkedin_url = Some(clean_li);
+                }
             }
 
             if let Some(ref base) = base_parsed {

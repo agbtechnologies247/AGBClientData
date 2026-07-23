@@ -101,6 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetTab = document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
             if (targetTab) targetTab.classList.add('active');
 
+            const statsGrid = document.querySelector('.stats-grid');
+            if (statsGrid) {
+                statsGrid.style.display = (tabName === 'dashboard') ? 'grid' : 'none';
+            }
+
             if (tabName === 'dashboard') pageHeading.innerText = 'US & UK IT Company Lead Intelligence';
             if (tabName === 'people') {
                 pageHeading.innerText = 'Ranked Executive Decision Makers (CTO, VP Eng, CEO)';
@@ -285,19 +290,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Helper: Validate LinkedIn URL to prevent 404 redirects
+    function isValidLinkedInUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const clean = url.trim().replace(/\/+$/, '');
+        if (clean.includes('/404') || clean.includes('share') || clean.includes('intent')) return false;
+        if (!clean.includes('linkedin.com/in/') && !clean.includes('linkedin.com/company/')) return false;
+        const parts = clean.split('/in/').concat(clean.split('/company/')).filter(p => p && !p.includes('linkedin.com'));
+        if (parts.length === 0) return false;
+        const slug = parts[0].trim().replace(/\/+$/, '');
+        return slug.length >= 2 && slug !== '404' && /[a-zA-Z0-9]/.test(slug);
+    }
+
     // Fetch Decision Makers (People)
     async function loadPeople(newPage, newLimit) {
         if (newPage) peoplePage = newPage;
         if (newLimit) peopleLimit = newLimit;
 
         const search = document.getElementById('filterPeopleSearch')?.value || '';
-        const role = document.getElementById('filterPeopleRole')?.value || 'ALL';
+        const role = document.getElementById('filterPeopleRole')?.value || '';
 
         const params = new URLSearchParams({
+            search_query: search,
+            normalized_role: role,
             page: peoplePage,
-            limit: peopleLimit,
-            role: role,
-            search_query: search
+            limit: peopleLimit
         });
 
         try {
@@ -310,18 +327,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const people = data.people || [];
 
             const badge = document.getElementById('peopleCountBadge');
-            if (badge) badge.innerText = `${total} decision makers ranked`;
+            if (badge) badge.innerText = `${total} decision makers found`;
 
             renderPaginationUI('people', total, peoplePage, peopleLimit, (p, l) => loadPeople(p, l));
 
             if (!people || people.length === 0) {
-                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">No decision makers found.</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">No ranked decision makers found matching criteria.</td></tr>`;
                 return;
             }
 
             people.forEach(p => {
                 const tr = document.createElement('tr');
-                const copyEmailBtn = p.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${p.public_email}', 'Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
+                const copyEmailBtn = p.public_email ? `<button class="btn-copy" onclick="copyToClipboard('${p.public_email}', 'Executive Email')"><i class="fa-solid fa-copy"></i> Email</button>` : '';
+                const hasValidLi = isValidLinkedInUrl(p.linkedin_url);
 
                 tr.innerHTML = `
                     <td>
@@ -344,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                     <td>
-                        ${p.linkedin_url ? `<a href="${p.linkedin_url}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:11px;"><i class="fa-solid fa-brands fa-linkedin"></i> LinkedIn</a>` : '<span style="color:var(--text-muted);">-</span>'}
+                        ${hasValidLi ? `<a href="${p.linkedin_url}" target="_blank" class="btn btn-secondary btn-sm" style="font-size:11px;"><i class="fa-solid fa-brands fa-linkedin"></i> LinkedIn</a>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
                 `;
                 if (tbody) tbody.appendChild(tr);

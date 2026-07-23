@@ -200,4 +200,17 @@ mod tests {
         assert!(updated_stats.total_companies >= initial_stats.total_companies);
         assert!(updated_stats.total_decision_makers >= initial_stats.total_decision_makers);
     }
+
+    #[test]
+    fn test_linkedin_url_validation() {
+        use crate::validator::ContactValidator;
+
+        assert!(!ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/company/"));
+        assert!(!ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/in/"));
+        assert!(!ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/404/"));
+        assert!(!ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/shareArticle"));
+
+        assert!(ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/in/alex-rivera-tech"));
+        assert!(ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/company/thoughtworks"));
+    }
 }

@@ -227,6 +227,24 @@ impl ContactValidator {
             confidence_tier,
         }
     }
+
+    pub fn is_valid_linkedin_url(url: &str) -> bool {
+        let clean = url.trim().trim_end_matches('/');
+        if clean.contains("share") || clean.contains("intent") || clean.ends_with("/404") {
+            return false;
+        }
+        if !clean.contains("linkedin.com/in/") && !clean.contains("linkedin.com/company/") {
+            return false;
+        }
+
+        if let Some(slug) = clean.split("/in/").nth(1).or_else(|| clean.split("/company/").nth(1)) {
+            let slug_trim = slug.trim().trim_end_matches('/');
+            if !slug_trim.is_empty() && slug_trim != "404" && slug_trim.len() >= 2 {
+                return slug_trim.chars().any(|c| c.is_alphanumeric());
+            }
+        }
+        false
+    }
 }
 
 impl EmailValidatorTrait for ContactValidator {
