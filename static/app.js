@@ -543,23 +543,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Export Excel (.xlsx) Actions
-    document.getElementById('btnExportExcel').addEventListener('click', () => {
-        const country = document.getElementById('filterCountry').value;
-        const priority = document.getElementById('filterPriority').value;
+    document.getElementById('btnExportExcel')?.addEventListener('click', () => {
+        const country = document.getElementById('filterCountry')?.value || '';
+        const priority = document.getElementById('filterPriority')?.value || '';
         window.location.href = `/api/leads/export?country=${country}&priority=${priority}&page=1&limit=10000`;
     });
 
-    document.getElementById('btnExportPeople').addEventListener('click', () => {
+    document.getElementById('btnExportPeople')?.addEventListener('click', () => {
         window.location.href = `/api/people/export?page=1&limit=10000`;
     });
 
-    document.getElementById('btnExportInvestors').addEventListener('click', () => {
+    document.getElementById('btnExportInvestors')?.addEventListener('click', () => {
         window.location.href = `/api/investors/export?page=1&limit=10000`;
     });
 
     // Toggle Crawler (Start / Stop)
-    document.getElementById('btnToggleCrawler').addEventListener('click', async () => {
-        const statusText = document.getElementById('crawlerStatusText').innerText;
+    document.getElementById('btnToggleCrawler')?.addEventListener('click', async () => {
+        const statusEl = document.getElementById('crawlerStatusText');
+        const statusText = statusEl ? statusEl.innerText : 'IDLE';
 
         if (statusText.includes('IDLE')) {
             const res = await fetch('/api/crawler/start', {
@@ -577,18 +578,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Filter event listeners
-    document.getElementById('filterSearch').addEventListener('input', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterCountry').addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterPriority').addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('filterHiringOnly').addEventListener('change', () => { currentPage = 1; loadLeads(); });
-    document.getElementById('btnRefreshLeads').addEventListener('click', loadLeads);
+    document.getElementById('filterSearch')?.addEventListener('input', () => { currentPage = 1; loadLeads(); });
+    document.getElementById('filterCountry')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
+    document.getElementById('filterPriority')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
+    document.getElementById('filterHiringOnly')?.addEventListener('change', () => { currentPage = 1; loadLeads(); });
+    document.getElementById('btnRefreshLeads')?.addEventListener('click', loadLeads);
 
-    document.getElementById('filterPeopleSearch').addEventListener('input', loadPeople);
-    document.getElementById('filterPeopleRole').addEventListener('change', loadPeople);
+    document.getElementById('filterPeopleSearch')?.addEventListener('input', loadPeople);
+    document.getElementById('filterPeopleRole')?.addEventListener('change', loadPeople);
 
-    document.getElementById('filterInvSearch').addEventListener('input', loadInvestors);
-    document.getElementById('filterInvType').addEventListener('change', loadInvestors);
-    document.getElementById('filterInvFocus').addEventListener('change', loadInvestors);
+    document.getElementById('filterInvSearch')?.addEventListener('input', loadInvestors);
+    document.getElementById('filterInvType')?.addEventListener('change', loadInvestors);
+    document.getElementById('filterInvFocus')?.addEventListener('change', loadInvestors);
 
     // Proxy Loader
     async function loadProxies() {
