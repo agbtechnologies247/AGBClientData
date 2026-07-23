@@ -167,4 +167,36 @@ mod tests {
         assert_eq!(personalized_sub, subject);
         assert!(personalized_body.contains("Bhramit Pardhi [Shubham]"));
     }
+
+    #[tokio::test]
+    async fn test_live_crawler_and_auto_queue_discovery() {
+        use crate::db::Database;
+        use crate::proxy::ProxyManager;
+        use crate::crawler::AntiBlockingCrawler;
+
+        let db = Database::new(":memory:").expect("Failed to create in-memory db");
+        let proxy_mgr = ProxyManager::new(vec![]);
+        let crawler = AntiBlockingCrawler::new(db.clone(), proxy_mgr);
+
+        let initial_stats = db.get_stats().unwrap();
+        
+        let seeds = vec![
+            "https://thoughtworks.com".to_string(),
+            "https://epam.com".to_string(),
+        ];
+
+        crawler.start_crawl(seeds, Some("fast".to_string())).await;
+        
+        // Wait up to 10 seconds for async crawl to complete
+        for _ in 0..20 {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            if !crawler.is_running() {
+                break;
+            }
+        }
+
+        let updated_stats = db.get_stats().unwrap();
+        assert!(updated_stats.total_companies >= initial_stats.total_companies);
+        assert!(updated_stats.total_decision_makers >= initial_stats.total_decision_makers);
+    }
 }

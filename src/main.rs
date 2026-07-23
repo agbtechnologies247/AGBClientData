@@ -40,10 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = Database::new(&db_path)?;
     info!("Database initialized at {}", db_path);
 
-    let initial_proxies = vec![
-        "http://185.199.229.156:8080".to_string(),
-        "http://198.51.100.42:3128".to_string(),
-    ];
+    let initial_proxies = vec![];
     let proxy_mgr = ProxyManager::new(initial_proxies);
 
     let crawler = Arc::new(AntiBlockingCrawler::new(db.clone(), proxy_mgr.clone()));
