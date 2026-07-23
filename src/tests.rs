@@ -213,4 +213,35 @@ mod tests {
         assert!(ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/in/alex-rivera-tech"));
         assert!(ContactValidator::is_valid_linkedin_url("https://www.linkedin.com/company/thoughtworks"));
     }
+
+    #[test]
+    fn test_bounce_signature_extraction() {
+        use crate::bounce_monitor::BounceMonitorEngine;
+        use crate::db::Database;
+
+        let db = Database::new(":memory:").unwrap();
+        db.record_sent_email_history("contact@strataai.tech", "Strata AI", "SENT").unwrap();
+
+        let sample_ndr_body = r#"
+            The mail system
+            <contact@strataai.tech>: Host or domain name not found. Name service error for name=strataai.tech type=A: Host not found
+        "#;
+
+        let parsed = BounceMonitorEngine::parse_bounce_recipient(sample_ndr_body);
+        assert_eq!(parsed, Some("contact@strataai.tech".to_string()));
+
+        let processed = BounceMonitorEngine::process_email_payload(
+            &db,
+            "MAILER-DAEMON@mailchannels.net",
+            "Undelivered Mail Returned to Sender",
+            sample_ndr_body,
+        );
+
+        assert!(processed);
+
+        let (history, _) = db.get_sent_emails_history(Some("BOUNCED"), 1, 10).unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].1, "contact@strataai.tech");
+        assert_eq!(history[0].3, "BOUNCED");
+    }
 }

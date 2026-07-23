@@ -1,4 +1,5 @@
 mod api;
+mod bounce_monitor;
 mod campaign;
 mod crawler;
 mod db;
@@ -14,6 +15,7 @@ mod tests;
 mod validator;
 
 use api::{create_router, AppState};
+use bounce_monitor::BounceMonitorEngine;
 use crawler::AntiBlockingCrawler;
 use db::Database;
 use proxy::ProxyManager;
@@ -49,6 +51,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         crawler_daemon.start_daemon_loop().await;
+    });
+
+    let bounce_db = db.clone();
+    tokio::spawn(async move {
+        BounceMonitorEngine::start_daemon_loop(bounce_db).await;
     });
 
     let outreach_db = db.clone();

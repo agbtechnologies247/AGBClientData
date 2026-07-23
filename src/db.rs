@@ -1008,6 +1008,15 @@ impl Database {
         Ok((list, total))
     }
 
+    pub fn update_email_status(&self, recipient_email: &str, status: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let updated = conn.execute(
+            "UPDATE sent_emails_history SET status = ? WHERE recipient_email = ?",
+            params![status, recipient_email],
+        )?;
+        Ok(updated > 0)
+    }
+
     pub fn clear_all_data(&self) -> Result<()> {
         {
             let conn = self.conn.lock().unwrap();
