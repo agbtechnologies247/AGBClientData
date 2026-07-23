@@ -438,9 +438,21 @@ Phone: +91 9049874780</textarea>
                     </div>
 
                     <div class="card table-card">
+                        <div class="filter-bar card" style="margin-bottom:0; border-bottom:1px solid var(--border-color); border-radius:12px 12px 0 0;">
+                            <div class="filter-group">
+                                <label>Delivery Status Filter</label>
+                                <select id="filterOutreachStatus">
+                                    <option value="ALL">All Dispatched Emails</option>
+                                    <option value="SENT" selected>Delivered (SENT)</option>
+                                    <option value="BOUNCED">Undelivered / Bounced (BOUNCED)</option>
+                                    <option value="FAILED">Failed (FAILED)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-secondary btn-sm" id="btnRefreshOutreachHistory" style="align-self:flex-end;"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                        </div>
                         <div class="card-header">
-                            <h3><i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Delivered Email History & Status (Verified Sent)</h3>
-                            <button class="btn btn-secondary btn-sm" id="btnRefreshOutreachHistory"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+                            <h3><i class="fa-solid fa-paper-plane" style="color:var(--accent);"></i> Outreach Campaign Execution Log</h3>
+                            <span class="badge" id="outreachCountBadge">0 emails</span>
                         </div>
                         <div class="table-responsive">
                             <table class="data-table">
@@ -456,6 +468,20 @@ Phone: +91 9049874780</textarea>
                                     <!-- Dynamic Sent Emails -->
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="pagination-bar" id="outreachPagination">
+                            <div class="pagination-info">Showing <span id="outreachRange">0-0</span> of <span id="outreachTotal">0</span> emails</div>
+                            <div class="pagination-controls">
+                                <button class="btn btn-secondary btn-sm" id="btnPrevOutreach"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                                <span class="page-indicator" id="outreachPageIndicator">Page 1 of 1</span>
+                                <button class="btn btn-secondary btn-sm" id="btnNextOutreach">Next <i class="fa-solid fa-chevron-right"></i></button>
+                                <select id="outreachLimitSelect" class="limit-select">
+                                    <option value="10">10 / page</option>
+                                    <option value="25" selected>25 / page</option>
+                                    <option value="50">50 / page</option>
+                                    <option value="100">100 / page</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>

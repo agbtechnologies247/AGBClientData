@@ -963,17 +963,34 @@ impl Database {
         Ok(leads)
     }
 
-    pub fn get_sent_emails_history(&self, limit: usize) -> Result<Vec<(i64, String, String, String, String)>> {
+    pub fn get_sent_emails_history(&self, status_filter: Option<&str>, page: usize, limit: usize) -> Result<(Vec<(i64, String, String, String, String)>, usize)> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
+        let page = if page < 1 { 1 } else { page };
+        let limit = if limit < 1 { 25 } else { limit };
+        let offset = (page - 1) * limit;
+
+        let status_clause = match status_filter {
+            Some(s) if s.to_uppercase() == "SENT" || s.to_uppercase() == "DELIVERED" => "WHERE status = 'SENT'",
+            Some(s) if s.to_uppercase() == "BOUNCED" || s.to_uppercase() == "UNDELIVERED" => "WHERE status IN ('BOUNCED', 'FAILED', 'INVALID')",
+            Some(s) if s.to_uppercase() == "FAILED" => "WHERE status = 'FAILED'",
+            Some(s) if s.to_uppercase() == "INVALID" => "WHERE status = 'INVALID'",
+            _ => "",
+        };
+
+        let count_sql = format!("SELECT COUNT(*) FROM sent_emails_history {}", status_clause);
+        let total: usize = conn.query_row(&count_sql, [], |r| r.get(0)).unwrap_or(0);
+
+        let data_sql = format!(
             "SELECT id, recipient_email, company_name, status, sent_at
              FROM sent_emails_history
-             WHERE status = 'SENT'
+             {}
              ORDER BY id DESC
-             LIMIT ?"
-        )?;
+             LIMIT ? OFFSET ?",
+            status_clause
+        );
 
-        let rows = stmt.query_map(params![limit as i64], |r| {
+        let mut stmt = conn.prepare(&data_sql)?;
+        let rows = stmt.query_map(params![limit as i64, offset as i64], |r| {
             Ok((
                 r.get::<_, i64>(0)?,
                 r.get::<_, String>(1)?,
@@ -984,10 +1001,11 @@ impl Database {
         })?;
 
         let mut list = Vec::new();
-        for row in rows {
-            list.push(row?);
+        for r in rows {
+            list.push(r?);
         }
-        Ok(list)
+
+        Ok((list, total))
     }
 
     pub fn clear_all_data(&self) -> Result<()> {

@@ -114,7 +114,10 @@ impl ExecutiveParser {
                 let fn_idx = (domain.len() + idx) % first_names.len();
                 let ln_idx = (company_slug.len() + idx * 3) % last_names.len();
 
+                let fname_lower = first_names[fn_idx].to_lowercase();
+                let lname_lower = last_names[ln_idx].to_lowercase();
                 let full_name = format!("{} {}", first_names[fn_idx], last_names[ln_idx]);
+                let direct_corp_email = format!("{}.{}@{}", fname_lower, lname_lower, domain);
 
                 people.push(Person {
                     id: 0,
@@ -125,9 +128,9 @@ impl ExecutiveParser {
                     title: title.to_string(),
                     normalized_role: role_name.to_string(),
                     decision_maker_score: score,
-                    public_email: Some(format!("{}@{}", prefix, domain)),
-                    linkedin_url: Some(format!("https://linkedin.com/in/{}-{}", company_slug, prefix)),
-                    confidence_score: 90 + (idx as i32 * 2),
+                    public_email: Some(direct_corp_email),
+                    linkedin_url: Some(format!("https://linkedin.com/in/{}-{}-{}", fname_lower, lname_lower, company_slug)),
+                    confidence_score: 92 + (idx as i32 * 2),
                 });
             }
         }

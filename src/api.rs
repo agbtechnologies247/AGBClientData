@@ -12,6 +12,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -416,9 +417,23 @@ async fn trigger_outreach_handler(State(state): State<AppState>) -> Response {
         .into_response()
 }
 
-async fn get_outreach_history_handler(State(state): State<AppState>) -> Response {
-    match state.db.get_sent_emails_history(50) {
-        Ok(history) => {
+#[derive(Debug, Clone, Deserialize)]
+pub struct OutreachHistoryFilter {
+    pub status: Option<String>,
+    pub page: Option<usize>,
+    pub limit: Option<usize>,
+}
+
+async fn get_outreach_history_handler(
+    State(state): State<AppState>,
+    Query(filter): Query<OutreachHistoryFilter>,
+) -> Response {
+    let page = filter.page.unwrap_or(1);
+    let limit = filter.limit.unwrap_or(25);
+    let status = filter.status.as_deref();
+
+    match state.db.get_sent_emails_history(status, page, limit) {
+        Ok((history, total)) => {
             let list: Vec<_> = history
                 .into_iter()
                 .map(|(id, email, company, status, sent_at)| {
@@ -431,7 +446,16 @@ async fn get_outreach_history_handler(State(state): State<AppState>) -> Response
                     })
                 })
                 .collect();
-            (StatusCode::OK, Json(json!({"outreach_history": list}))).into_response()
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "outreach_history": list,
+                    "total": total,
+                    "page": page,
+                    "limit": limit
+                })),
+            )
+                .into_response()
         }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

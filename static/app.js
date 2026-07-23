@@ -354,39 +354,77 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Helper: Humanized Relative Time Formatter ("10 mins ago", "2 hrs ago")
+    function formatRelativeTime(dateString) {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString.slice(0, 19).replace('T', ' ');
+
+        const now = new Date();
+        const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+        if (diffSeconds < 30) return 'Just now';
+        if (diffSeconds < 60) return `${diffSeconds}s ago`;
+
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes === 1 ? 'min' : 'mins'} ago`;
+
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hr' : 'hrs'} ago`;
+
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+
+        return dateString.slice(0, 10);
+    }
+
     // Fetch Sent Emails Outreach History
     async function loadOutreachHistory(newPage, newLimit) {
         if (newPage) outreachPage = newPage;
         if (newLimit) outreachLimit = newLimit;
 
+        const statusFilter = document.getElementById('filterOutreachStatus')?.value || 'SENT';
+
+        const params = new URLSearchParams({
+            status: statusFilter,
+            page: outreachPage,
+            limit: outreachLimit
+        });
+
         try {
-            const res = await fetch('/api/outreach/history');
+            const res = await fetch(`/api/outreach/history?${params}`);
             const data = await res.json();
             const tbody = document.getElementById('outreachHistoryTableBody');
             if (!tbody) return;
             tbody.innerHTML = '';
 
             const allItems = data.outreach_history || [];
-            const total = allItems.length;
+            const total = data.total !== undefined ? data.total : allItems.length;
+
+            const badge = document.getElementById('outreachCountBadge');
+            if (badge) badge.innerText = `${total} ${statusFilter.toLowerCase()} emails`;
 
             renderPaginationUI('outreach', total, outreachPage, outreachLimit, (p, l) => loadOutreachHistory(p, l));
 
             if (!allItems || allItems.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No outreach emails dispatched yet. Hourly daemon active.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No ${statusFilter.toLowerCase()} outreach emails found. Hourly daemon active.</td></tr>`;
                 return;
             }
 
-            const startIdx = (outreachPage - 1) * outreachLimit;
-            const pageItems = allItems.slice(startIdx, startIdx + outreachLimit);
-
-            pageItems.forEach(item => {
+            allItems.forEach(item => {
                 const tr = document.createElement('tr');
                 const badgeClass = item.status === 'SENT' ? 'badge-high' : (item.status === 'REPLIED' ? 'badge-high' : 'badge-low');
+                const relTime = formatRelativeTime(item.sent_at);
+                const fullTime = item.sent_at.slice(0, 19).replace('T', ' ');
+
                 tr.innerHTML = `
                     <td><strong>${item.recipient_email}</strong></td>
                     <td>${item.company_name}</td>
                     <td><span class="badge ${badgeClass}">${item.status}</span></td>
-                    <td>${item.sent_at.slice(0, 19).replace('T', ' ')}</td>
+                    <td>
+                        <span style="font-weight:600; color:var(--text-primary);">${relTime}</span>
+                        <br><small style="color:var(--text-muted); font-size:11px;">${fullTime}</small>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -711,6 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('filterInvSearch')?.addEventListener('input', () => { investorsPage = 1; loadInvestors(); });
     document.getElementById('filterInvType')?.addEventListener('change', () => { investorsPage = 1; loadInvestors(); });
     document.getElementById('filterInvFocus')?.addEventListener('change', () => { investorsPage = 1; loadInvestors(); });
+    document.getElementById('filterOutreachStatus')?.addEventListener('change', () => { outreachPage = 1; loadOutreachHistory(); });
 
     // Proxy Loader
     async function loadProxies() {

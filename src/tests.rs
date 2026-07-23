@@ -138,7 +138,8 @@ mod tests {
         db.record_sent_email_history(test_email, "Apex Systems Solutions", "SENT").unwrap();
         assert!(db.is_email_already_sent(test_email).unwrap(), "Email should be recorded as sent");
 
-        let history = db.get_sent_emails_history(10).unwrap();
+        let (history, total) = db.get_sent_emails_history(Some("SENT"), 1, 10).unwrap();
+        assert_eq!(total, 1);
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].1, test_email);
         assert_eq!(history[0].3, "SENT");
