@@ -273,8 +273,14 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                     }
                 })
                 .subject(&subject)
-                .header(lettre::message::header::HeaderName::new_unchecked("List-Unsubscribe"), "<mailto:support@agbtechnologies.com?subject=Unsubscribe>")
-                .header(lettre::message::header::HeaderName::new_unchecked("X-Mailer"), "AGB-Enterprise-Outreach/2.1")
+                .header(lettre::message::header::Custom::new(
+                    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe"),
+                    "<mailto:support@agbtechnologies.com?subject=Unsubscribe>".to_string(),
+                ))
+                .header(lettre::message::header::Custom::new(
+                    lettre::message::header::HeaderName::new_from_ascii_str("X-Mailer"),
+                    "AGB-Enterprise-Outreach/2.1".to_string(),
+                ))
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,
@@ -377,8 +383,14 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                     }
                 })
                 .subject(&subject)
-                .header(lettre::message::header::HeaderName::new_unchecked("List-Unsubscribe"), "<mailto:support@agbtechnologies.com?subject=Unsubscribe>")
-                .header(lettre::message::header::HeaderName::new_unchecked("X-Mailer"), "AGB-Enterprise-Outreach/2.1")
+                .header(lettre::message::header::Custom::new(
+                    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe"),
+                    "<mailto:support@agbtechnologies.com?subject=Unsubscribe>".to_string(),
+                ))
+                .header(lettre::message::header::Custom::new(
+                    lettre::message::header::HeaderName::new_from_ascii_str("X-Mailer"),
+                    "AGB-Enterprise-Outreach/2.1".to_string(),
+                ))
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,
