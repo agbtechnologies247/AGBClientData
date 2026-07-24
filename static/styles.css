@@ -120,6 +120,7 @@ body {
 
 .app-layout.sidebar-collapsed .sidebar .brand-title,
 .app-layout.sidebar-collapsed .sidebar .brand-subtitle,
+.app-layout.sidebar-collapsed .sidebar .brand-text,
 .app-layout.sidebar-collapsed .sidebar .nav-text,
 .app-layout.sidebar-collapsed .sidebar .sidebar-footer {
     display: none !important;

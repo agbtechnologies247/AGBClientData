@@ -29,7 +29,7 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 2. Extract from mailto: links in HTML
+    // 2. Extract from mailto: links and data-attributes in HTML
     let a_selector = Selector::parse("a[href^='mailto:']").unwrap();
     for element in document.select(&a_selector) {
         if let Some(href) = element.value().attr("href") {
@@ -37,6 +37,18 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
             let clean = email_raw.trim().to_lowercase();
             if is_valid_business_email(&clean) {
                 emails_set.insert(clean);
+            }
+        }
+    }
+
+    // 2b. Extract from JSON-LD microdata scripts
+    let json_ld_selector = Selector::parse("script[type='application/ld+json']").unwrap();
+    for element in document.select(&json_ld_selector) {
+        let text = element.text().collect::<String>();
+        for mat in email_regex.find_iter(&text) {
+            let email = mat.as_str().to_lowercase();
+            if is_valid_business_email(&email) {
+                emails_set.insert(email);
             }
         }
     }

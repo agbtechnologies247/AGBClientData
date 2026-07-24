@@ -1,0 +1,516 @@
+Got it. You want a **JSON configuration/specification for a Rust parser** that takes a **public URL**, parses the publicly accessible frontend, and uses **passive/research techniques to discover data that is hidden from the visible UI but still exposed to the browser**.
+
+So the scope is:
+
+```text
+Public URL
+   ↓
+HTML
+   ↓
+JavaScript bundles
+   ↓
+Source maps
+   ↓
+Frontend routes
+   ↓
+API references
+   ↓
+Network requests
+   ↓
+Browser storage
+   ↓
+Hidden UI states / feature flags
+   ↓
+Publicly exposed data
+   ↓
+Structured findings
+```
+
+It should **not bypass authentication, exploit vulnerabilities, brute-force, or access data that is not publicly exposed to the client**.
+
+Here is the focused JSON:
+
+```json
+{
+  "schema_version": "1.0.0",
+  "parser": {
+    "name": "public_frontend_recon_parser",
+    "version": "1.0.0",
+    "mode": "public_observation",
+    "input": "url"
+  },
+
+  "scope": {
+    "allowed": [
+      "public_html",
+      "public_javascript",
+      "public_css",
+      "public_source_maps",
+      "public_api_responses",
+      "public_network_requests",
+      "public_browser_storage",
+      "public_frontend_routes",
+      "public_metadata",
+      "publicly_exposed_hidden_ui"
+    ],
+    "prohibited": [
+      "authentication_bypass",
+      "authorization_bypass",
+      "credential_bruteforce",
+      "password_testing",
+      "token_theft",
+      "private_data_access",
+      "rate_limit_bypass",
+      "destructive_requests",
+      "unauthorized_exploitation"
+    ]
+  },
+
+  "target": {
+    "url": null,
+    "origin": null,
+    "allowed_origins": [],
+    "same_origin_only": true
+  },
+
+  "discovery": {
+    "html": {
+      "enabled": true,
+      "extract": [
+        "all_links",
+        "all_forms",
+        "form_actions",
+        "script_sources",
+        "inline_scripts",
+        "stylesheet_sources",
+        "iframe_sources",
+        "image_sources",
+        "video_sources",
+        "audio_sources",
+        "meta_tags",
+        "data_attributes",
+        "comments",
+        "hidden_elements",
+        "disabled_elements",
+        "aria_attributes"
+      ]
+    },
+
+    "routes": {
+      "enabled": true,
+      "extract_from": [
+        "anchor_tags",
+        "forms",
+        "javascript",
+        "router_configuration",
+        "history_api",
+        "window_location",
+        "source_maps",
+        "sitemap",
+        "robots_txt"
+      ],
+      "discover": [
+        "visible_routes",
+        "hidden_routes",
+        "unlinked_routes",
+        "frontend_routes",
+        "admin_route_references",
+        "authentication_routes",
+        "api_routes",
+        "upload_routes",
+        "payment_routes",
+        "debug_routes",
+        "development_routes"
+      ]
+    },
+
+    "javascript": {
+      "enabled": true,
+      "download": true,
+      "parse": true,
+      "extract": [
+        "urls",
+        "api_endpoints",
+        "graphql_endpoints",
+        "websocket_endpoints",
+        "fetch_calls",
+        "xhr_calls",
+        "axios_calls",
+        "http_methods",
+        "request_paths",
+        "query_parameters",
+        "path_parameters",
+        "request_body_fields",
+        "response_fields",
+        "headers",
+        "cookies",
+        "local_storage_keys",
+        "session_storage_keys",
+        "indexed_db_names",
+        "feature_flags",
+        "environment_variables",
+        "configuration_objects",
+        "hardcoded_values",
+        "public_api_keys",
+        "tokens",
+        "internal_identifiers",
+        "route_names",
+        "component_names",
+        "debug_strings"
+      ]
+    },
+
+    "source_maps": {
+      "enabled": true,
+      "discover": true,
+      "parse": true,
+      "extract": [
+        "original_source_files",
+        "original_source_paths",
+        "source_contents",
+        "function_names",
+        "variable_names",
+        "comments",
+        "internal_routes",
+        "api_references",
+        "debug_information",
+        "feature_flags",
+        "environment_names"
+      ]
+    },
+
+    "network": {
+      "enabled": true,
+      "observe": true,
+      "record": [
+        "request_url",
+        "request_method",
+        "request_headers",
+        "request_parameters",
+        "request_body",
+        "response_status",
+        "response_headers",
+        "response_body",
+        "response_content_type",
+        "redirects",
+        "cors_headers",
+        "cache_headers"
+      ],
+      "discover": [
+        "api_endpoints",
+        "graphql_operations",
+        "websocket_connections",
+        "background_requests",
+        "lazy_loaded_data",
+        "pagination_endpoints",
+        "search_endpoints",
+        "filter_endpoints",
+        "export_endpoints",
+        "download_endpoints"
+      ]
+    },
+
+    "browser_storage": {
+      "enabled": true,
+      "inspect": [
+        "local_storage",
+        "session_storage",
+        "cookies",
+        "indexed_db",
+        "cache_storage"
+      ],
+      "extract": [
+        "key_names",
+        "value_types",
+        "public_configuration",
+        "feature_flags",
+        "cached_api_responses",
+        "application_state"
+      ]
+    }
+  },
+
+  "hidden_data_discovery": {
+    "enabled": true,
+
+    "techniques": [
+      {
+        "id": "HIDDEN-001",
+        "name": "DOM hidden-state discovery",
+        "inspect": [
+          "display_none",
+          "visibility_hidden",
+          "opacity_zero",
+          "hidden_attribute",
+          "aria_hidden",
+          "disabled_elements",
+          "collapsed_elements",
+          "hidden_tabs",
+          "hidden_modals",
+          "hidden_dropdowns"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-002",
+        "name": "Frontend bundle route discovery",
+        "inspect": [
+          "unlinked_routes",
+          "lazy_loaded_routes",
+          "dynamic_imports",
+          "route_configuration",
+          "router_manifests"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-003",
+        "name": "API endpoint discovery",
+        "inspect": [
+          "hardcoded_api_urls",
+          "fetch_calls",
+          "xhr_calls",
+          "axios_calls",
+          "graphql_queries",
+          "graphql_fragments",
+          "websocket_urls"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-004",
+        "name": "Source map discovery",
+        "inspect": [
+          "original_sources",
+          "unminified_code",
+          "comments",
+          "debug_routes",
+          "internal_api_references"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-005",
+        "name": "Frontend state discovery",
+        "inspect": [
+          "redux_state",
+          "zustand_state",
+          "vuex_state",
+          "react_query_cache",
+          "apollo_cache",
+          "window_global_objects",
+          "embedded_json"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-006",
+        "name": "Embedded data discovery",
+        "inspect": [
+          "script_json_blocks",
+          "initial_state",
+          "hydration_data",
+          "preloaded_data",
+          "next_data",
+          "nuxt_data",
+          "embedded_configuration"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-007",
+        "name": "Feature flag discovery",
+        "inspect": [
+          "feature_flags",
+          "experiment_flags",
+          "beta_features",
+          "environment_flags",
+          "role_flags",
+          "region_flags"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-008",
+        "name": "Lazy-loaded asset discovery",
+        "inspect": [
+          "dynamic_javascript_chunks",
+          "dynamic_css_chunks",
+          "lazy_images",
+          "lazy_api_requests",
+          "module_preloads"
+        ]
+      },
+
+      {
+        "id": "HIDDEN-009",
+        "name": "Public cache discovery",
+        "inspect": [
+          "browser_cache",
+          "cache_storage",
+          "service_worker_cache",
+          "previously_loaded_public_responses"
+        ]
+      }
+    ]
+  },
+
+  "data_extraction": {
+    "extract": [
+      "public_user_data",
+      "public_profiles",
+      "public_posts",
+      "public_products",
+      "public_comments",
+      "public_search_results",
+      "public_metadata",
+      "public_configuration",
+      "public_feature_flags",
+      "public_api_responses",
+      "public_embedded_json",
+      "public_graphql_data"
+    ],
+
+    "classify": [
+      "public",
+      "frontend_exposed",
+      "embedded",
+      "cached",
+      "api_observed",
+      "source_map_exposed",
+      "potentially_sensitive"
+    ]
+  },
+
+  "frontend_intelligence": {
+    "identify": [
+      "framework",
+      "framework_version",
+      "frontend_libraries",
+      "javascript_bundler",
+      "css_framework",
+      "analytics_services",
+      "cdn_providers",
+      "hosting_provider",
+      "third_party_integrations",
+      "api_provider",
+      "authentication_provider"
+    ]
+  },
+
+  "public_api_analysis": {
+    "for_each_endpoint": {
+      "extract": [
+        "url",
+        "method",
+        "parameters",
+        "request_body_schema",
+        "response_schema",
+        "response_fields",
+        "pagination",
+        "filters",
+        "sorting",
+        "search_parameters"
+      ]
+    }
+  },
+
+  "observations": {
+    "record": [
+      {
+        "id": "string",
+        "type": "html | javascript | route | api | network | storage | source_map | hidden_ui | embedded_data",
+        "source": "string",
+        "location": "string",
+        "value": "any",
+        "visibility": "visible | hidden_ui | bundle | source_map | network | storage | embedded",
+        "confidence": "confirmed | high | medium | low"
+      }
+    ]
+  },
+
+  "output": {
+    "format": "json",
+    "include": [
+      "target_information",
+      "technology_stack",
+      "routes",
+      "api_endpoints",
+      "graphql_operations",
+      "websocket_endpoints",
+      "javascript_assets",
+      "source_maps",
+      "browser_storage",
+      "hidden_ui",
+      "embedded_data",
+      "feature_flags",
+      "public_data",
+      "network_observations",
+      "public_configuration",
+      "findings"
+    ]
+  }
+}
+```
+
+The most important part for your use case is this:
+
+```text
+VISIBLE UI
+    +
+HTML
+    +
+JAVASCRIPT BUNDLES
+    +
+SOURCE MAPS
+    +
+NETWORK REQUESTS
+    +
+BROWSER STORAGE
+    +
+FRONTEND STATE
+    +
+LAZY-LOADED CHUNKS
+    +
+EMBEDDED JSON
+    +
+HIDDEN DOM ELEMENTS
+    ↓
+PUBLICLY OBSERVABLE DATA GRAPH
+```
+
+This lets your Rust parser discover **data that is hidden from the visible page but still shipped to or exposed through the frontend**—without attempting to break authentication or access genuinely private data.
+
+For example, a page may visually show:
+
+```text
+Product: iPhone
+Price: ₹80,000
+```
+
+But the frontend may also expose:
+
+```json
+{
+  "product_id": "123",
+  "internal_category_id": "456",
+  "stock_count": 17,
+  "supplier_code": "ABC",
+  "feature_flags": {
+    "new_checkout": true
+  }
+}
+```
+
+Your parser should classify those separately:
+
+```json
+{
+  "visibility": "embedded",
+  "access": "public_frontend",
+  "source": "window.__INITIAL_STATE__",
+  "classification": "frontend_exposed"
+}
+```
+
+That is the correct boundary for a **public URL/frontend reverse parser**.

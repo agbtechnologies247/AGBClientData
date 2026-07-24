@@ -135,7 +135,7 @@ Phone: +91 9049874780"#.to_string();
         (subject, body)
     }
 
-    /// Sends a batch of unsent email leads using Hostinger SMTP with strict deduplication
+    /// Sends a batch of unsent email leads using Hostinger SMTP with high-throughput worker pool
     pub async fn dispatch_outreach_batch(db: &Database, limit: usize) -> Result<usize, String> {
         let unsent_leads = db.get_unsent_leads_batch(limit).map_err(|e| e.to_string())?;
 
@@ -241,8 +241,7 @@ Phone: +91 9049874780"#.to_string();
                 }
             }
 
-            // Brief delay between email dispatches to prevent rate-limit throttling
-            sleep(Duration::from_millis(1500)).await;
+            sleep(Duration::from_millis(500)).await;
         }
 
         Ok(sent_count)

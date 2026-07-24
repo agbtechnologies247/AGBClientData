@@ -258,9 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </td>
                     <td>
-                        <strong>${c.name}</strong><br>
-                        <a href="${c.website}" target="_blank" style="color:var(--accent); text-decoration:none; font-size:12px;">
-                            ${c.domain} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:9px;"></i>
+                        <a href="${c.website}" target="_blank" style="color:var(--text-primary); text-decoration:none; font-weight:700;">
+                            ${c.name} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px; color:var(--accent);"></i>
                         </a>
                     </td>
                     <td><span class="badge" style="background:var(--bg-subtle); border: 1px solid var(--border-color); color: var(--text-primary);">${c.country}</span></td>
@@ -721,14 +720,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seed_urls: [], mode: 'stealth' })
             });
-            const data = await res.json();
-            alert(`Continuous Crawl Daemon launched in Stealth Mode.`);
+            if (res.ok) {
+                showToast("Continuous Crawl Daemon started in Stealth Mode.");
+            }
         } else {
             await fetch('/api/crawler/stop', { method: 'POST' });
-            alert("Crawler stop signal sent.");
+            showToast("Crawler daemon stop signal sent.");
         }
         loadStats();
     });
+
+    // Clear Logs Handler
+    const btnClearLogs = document.getElementById('btnClearLogs');
+    if (btnClearLogs) {
+        btnClearLogs.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/logs/clear', { method: 'POST' });
+                if (res.ok) {
+                    const consoleBox = document.getElementById('consoleLogs');
+                    if (consoleBox) consoleBox.innerHTML = '';
+                    showToast("Crawler console logs cleared!");
+                }
+            } catch (err) {
+                console.error("Error clearing logs:", err);
+            }
+        });
+    }
 
     // Save Stealth Settings
     document.getElementById('formCrawlerSettings')?.addEventListener('submit', async (e) => {

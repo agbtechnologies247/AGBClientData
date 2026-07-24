@@ -42,6 +42,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/crawler/clear-database", post(clear_database_handler))
         .route("/api/proxies", get(get_proxies_handler).post(add_proxies_handler))
         .route("/api/logs", get(get_logs_handler))
+        .route("/api/logs/clear", post(clear_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
         .with_state(state)
 }
@@ -299,6 +300,17 @@ async fn add_proxies_handler(
 async fn get_logs_handler(State(state): State<AppState>) -> Response {
     match state.db.get_recent_logs(50) {
         Ok(logs) => (StatusCode::OK, Json(json!({"logs": logs}))).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+async fn clear_logs_handler(State(state): State<AppState>) -> Response {
+    match state.db.clear_logs() {
+        Ok(_) => (StatusCode::OK, Json(json!({"status": "SUCCESS", "message": "Crawler logs cleared successfully."}))).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({"error": e.to_string()})),

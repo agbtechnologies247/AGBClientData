@@ -31,7 +31,7 @@ impl AntiBlockingCrawler {
             is_running: Arc::new(AtomicBool::new(false)),
             settings: Arc::new(RwLock::new(CrawlerSettings {
                 mode: "stealth".to_string(),
-                max_pages_per_domain: 5,
+                max_pages_per_domain: 12,
                 concurrency_limit: 3,
                 min_delay_ms: 1000,
                 max_delay_ms: 2500,
@@ -254,10 +254,11 @@ impl AntiBlockingCrawler {
                         let mut extracted_people = Vec::new();
                         let mut pages_crawled = 0;
 
-                        let target_subpaths = vec!["", "/contact", "/contact-us", "/about", "/about-us", "/team", "/our-team", "/careers", "/leadership", "/services"];
+                        let max_pages = settings.read().await.max_pages_per_domain;
+                        let target_subpaths = vec!["", "/contact", "/contact-us", "/about", "/about-us", "/team", "/our-team", "/careers", "/leadership", "/services", "/company", "/solutions"];
 
                         for subpath in target_subpaths {
-                            if pages_crawled >= 5 { break; }
+                            if pages_crawled >= max_pages { break; }
                             let crawl_target = if subpath.is_empty() {
                                 url.clone()
                             } else {

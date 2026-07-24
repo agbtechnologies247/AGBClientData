@@ -156,6 +156,18 @@ impl Database {
                 last_used TEXT
             );
 
+            CREATE TABLE IF NOT EXISTS outreach_queue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                recipient_email TEXT UNIQUE NOT NULL,
+                company_name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'QUEUED',
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                processed_at TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_outreach_queue_status ON outreach_queue(status);
+
             CREATE TABLE IF NOT EXISTS crawl_queue (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 domain TEXT UNIQUE NOT NULL,
@@ -210,17 +222,33 @@ impl Database {
                 )?;
             }
 
-            // Seed proxies
-            let sample_proxies = vec![
-                ("http://185.199.229.156:8080", "http"),
-                ("http://198.51.100.42:3128", "http"),
-                ("socks5://192.0.2.71:1080", "socks5"),
-            ];
-            for p in sample_proxies {
-                conn.execute(
-                    "INSERT OR IGNORE INTO proxies (url, protocol, active) VALUES (?1, ?2, 1)",
-                    params![p.0, p.1],
-                )?;
+        }
+
+        // Auto-seed proxies from Free_Proxy_List.json if available
+        let proxy_count: i64 = conn.query_row("SELECT COUNT(*) FROM proxies", [], |r| r.get(0)).unwrap_or(0);
+        if proxy_count == 0 {
+            if let Ok(content) = std::fs::read_to_string("Free_Proxy_List.json") {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                    if let Some(arr) = val.as_array() {
+                        for p in arr {
+                            let ip = p["ip"].as_str().unwrap_or("");
+                            let port = p["port"].as_str().unwrap_or("");
+                            let proto = p["protocols"].as_array()
+                                .and_then(|a| a.first())
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("http");
+                            let latency = p["latency"].as_f64().unwrap_or(500.0) as i64;
+
+                            if !ip.is_empty() && !port.is_empty() {
+                                let proxy_url = format!("{}://{}:{}", proto, ip, port);
+                                let _ = conn.execute(
+                                    "INSERT OR IGNORE INTO proxies (url, protocol, active, latency_ms) VALUES (?1, ?2, 1, ?3)",
+                                    params![proxy_url, proto, latency],
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1033,6 +1061,12 @@ impl Database {
             let _ = conn.execute("DELETE FROM crawl_logs", []);
         }
         self.seed_data_if_empty()?;
+        Ok(())
+    }
+
+    pub fn clear_logs(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM crawl_logs", [])?;
         Ok(())
     }
 }
