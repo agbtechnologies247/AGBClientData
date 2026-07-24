@@ -446,8 +446,9 @@ async fn trigger_outreach_handler(
     let limit = req.limit.unwrap_or(1000);
     let db = state.db.clone();
 
+    let category_clone = category.clone();
     tokio::spawn(async move {
-        match category.to_uppercase().as_str() {
+        match category_clone.to_uppercase().as_str() {
             "INVESTORS" => {
                 let _ = crate::campaign::CampaignEngine::dispatch_investor_outreach_batch(&db, limit).await;
             }
