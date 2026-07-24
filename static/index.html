@@ -563,25 +563,39 @@ Phone: +91 9049874780</textarea>
                 <div class="card">
                     <div class="card-header">
                         <h3><i class="fa-solid fa-network-wired"></i> Anti-Blocking Proxy Rotation Pool</h3>
-                        <button class="btn btn-secondary" id="btnAddProxyModalBtn"><i class="fa-solid fa-plus"></i> Add Proxies</button>
                     </div>
                     <div class="table-responsive">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Proxy Address</th>
-                                    <th>Protocol</th>
-                                    <th>Status</th>
-                                    <th>Successes</th>
-                                    <th>Failures</th>
-                                    <th>Latency</th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('id')">ID <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('url')">Proxy Address <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('protocol')">Protocol <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('active')">Status <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('success_count')">Successes <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('fail_count')">Failures <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('latency_ms')">Latency <i class="fa-solid fa-sort"></i></th>
+                                    <th style="cursor:pointer;" onclick="sortProxies('success_rate')">Success Rate % <i class="fa-solid fa-sort"></i></th>
                                 </tr>
                             </thead>
                             <tbody id="proxyTableBody">
                                 <!-- Dynamic Proxies -->
                             </tbody>
                         </table>
+                    </div>
+                    <div class="pagination-bar" id="proxiesPagination">
+                        <div class="pagination-info">Showing <span id="proxiesRange">0-0</span> of <span id="proxiesTotal">0</span> active proxies in rotation pool</div>
+                        <div class="pagination-controls">
+                            <button class="btn btn-secondary btn-sm" id="btnPrevProxies"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+                            <span class="page-indicator" id="proxiesPageIndicator">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-sm" id="btnNextProxies">Next <i class="fa-solid fa-chevron-right"></i></button>
+                            <select id="proxiesLimitSelect" class="limit-select">
+                                <option value="10">10 / page</option>
+                                <option value="25" selected>25 / page</option>
+                                <option value="50">50 / page</option>
+                                <option value="100">100 / page</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -642,6 +656,6 @@ Phone: +91 9049874780</textarea>
         </div>
     </div>
 
-    <script type="module" src="app.js?v=2.0.7"></script>
+    <script type="module" src="app.js?v=2.1.2"></script>
 </body>
 </html>

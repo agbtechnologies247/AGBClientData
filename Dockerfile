@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/
 # Copy compiled binary and static web assets
 COPY --from=builder /usr/src/app/target/release/marketing-data-crawler /app/marketing-data-crawler
 COPY static /app/static
+COPY Free_Proxy_List.json /app/Free_Proxy_List.json
 
 ENV PORT=8080
 ENV RUST_LOG=info

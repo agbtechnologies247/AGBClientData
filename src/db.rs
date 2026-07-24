@@ -225,7 +225,8 @@ impl Database {
         }
 
         // Sync proxies from Free_Proxy_List.json if available
-        if let Ok(content) = std::fs::read_to_string("Free_Proxy_List.json") {
+        let proxy_file = std::fs::read_to_string("Free_Proxy_List.json").or_else(|_| std::fs::read_to_string("/app/Free_Proxy_List.json"));
+        if let Ok(content) = proxy_file {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
                 if let Some(arr) = val.as_array() {
                     for p in arr {

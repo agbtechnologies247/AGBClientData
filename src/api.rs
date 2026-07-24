@@ -25,6 +25,16 @@ pub struct AppState {
 
 pub fn create_router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(serve_index_handler))
+        .route("/leads", get(serve_index_handler))
+        .route("/pipeline", get(serve_index_handler))
+        .route("/investors", get(serve_index_handler))
+        .route("/people", get(serve_index_handler))
+        .route("/campaigns", get(serve_index_handler))
+        .route("/outreach", get(serve_index_handler))
+        .route("/crawler", get(serve_index_handler))
+        .route("/proxies", get(serve_index_handler))
+        .route("/logs", get(serve_index_handler))
         .route("/api/stats", get(get_stats_handler))
         .route("/api/leads", get(get_leads_handler))
         .route("/api/leads/:id", get(get_lead_by_id_handler))
@@ -45,6 +55,13 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/logs/clear", post(clear_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
         .with_state(state)
+}
+
+async fn serve_index_handler() -> impl IntoResponse {
+    match std::fs::read_to_string("static/index.html").or_else(|_| std::fs::read_to_string("/app/static/index.html")) {
+        Ok(html) => (StatusCode::OK, [(header::CONTENT_TYPE, "text/html; charset=utf-8")], html).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, format!("Error loading index.html: {}", e)).into_response(),
+    }
 }
 
 async fn get_stats_handler(State(state): State<AppState>) -> Response {
