@@ -929,7 +929,7 @@ impl Database {
         Ok(count > 0)
     }
 
-    pub fn record_sent_email_history(&self, email: &str, company_name: &str, status: &str) -> Result<()> {
+    pub fn record_sent_email_history(&self, email: &str, company_name: &str, status: &str) -> Result<i64> {
         let conn = self.conn.lock().unwrap();
         let now = Utc::now().to_rfc3339();
         conn.execute(
@@ -938,7 +938,25 @@ impl Database {
              ON CONFLICT(recipient_email) DO UPDATE SET status=excluded.status, sent_at=excluded.sent_at",
             params![email.trim(), company_name, status, now],
         )?;
-        Ok(())
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn record_email_open_by_id(&self, history_id: i64) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let updated = conn.execute(
+            "UPDATE sent_emails_history SET status = 'OPENED' WHERE id = ?1",
+            params![history_id],
+        )?;
+        Ok(updated > 0)
+    }
+
+    pub fn record_email_click_by_id(&self, history_id: i64) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let updated = conn.execute(
+            "UPDATE sent_emails_history SET status = 'CLICKED' WHERE id = ?1",
+            params![history_id],
+        )?;
+        Ok(updated > 0)
     }
 
     pub fn get_unsent_leads_batch(&self, limit: usize) -> Result<Vec<Company>> {

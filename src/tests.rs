@@ -244,4 +244,52 @@ mod tests {
         assert_eq!(history[0].1, "contact@strataai.tech");
         assert_eq!(history[0].3, "BOUNCED");
     }
+
+    #[test]
+    fn test_open_and_click_tracking() {
+        use crate::db::Database;
+
+        let db = Database::new(":memory:").unwrap();
+        let history_id = db.record_sent_email_history("exec@acme.com", "Acme Inc", "SENT").unwrap();
+        assert!(history_id > 0);
+
+        let opened = db.record_email_open_by_id(history_id).unwrap();
+        assert!(opened);
+
+        let (history, _) = db.get_sent_emails_history(None, 1, 10).unwrap();
+        assert_eq!(history[0].3, "OPENED");
+
+        let clicked = db.record_email_click_by_id(history_id).unwrap();
+        assert!(clicked);
+
+        let (history2, _) = db.get_sent_emails_history(None, 1, 10).unwrap();
+        assert_eq!(history2[0].3, "CLICKED");
+    }
+
+    #[test]
+    fn test_tech_stack_signature_fingerprinting() {
+        use crate::parser::parse_html;
+
+        let sample_html = r#"
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <script src="https://cdn.shopify.com/s/files/theme.js"></script>
+                <script src="https://googletagmanager.com/gtag/js?id=UA-12345"></script>
+                <script src="https://js.stripe.com/v3/"></script>
+                <link rel="stylesheet" href="/_next/static/css/styles.css" />
+            </head>
+            <body>
+                <a href="mailto:contact@acme.com">Contact Sales</a>
+            </body>
+            </html>
+        "#;
+
+        let parsed = parse_html("https://acme.com", sample_html);
+        assert!(parsed.tech_stack.contains(&"React".to_string()));
+        assert!(parsed.tech_stack.contains(&"Next.js".to_string()));
+        assert!(parsed.tech_stack.contains(&"Shopify".to_string()));
+        assert!(parsed.tech_stack.contains(&"Stripe".to_string()));
+        assert!(parsed.tech_stack.contains(&"Google Analytics".to_string()));
+    }
 }

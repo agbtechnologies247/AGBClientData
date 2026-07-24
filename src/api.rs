@@ -44,6 +44,8 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/logs", get(get_logs_handler))
         .route("/api/logs/clear", post(clear_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
+        .route("/api/track/open/:id", get(track_open_handler))
+        .route("/api/track/click/:id", get(track_click_handler))
         .with_state(state)
 }
 
@@ -502,3 +504,43 @@ async fn get_outreach_history_handler(
             .into_response(),
     }
 }
+
+use axum::response::Redirect;
+use axum::http::header::{CONTENT_TYPE, CACHE_CONTROL};
+
+async fn track_open_handler(
+    State(state): State<AppState>,
+    Path(history_id): Path<i64>,
+) -> Response {
+    let _ = state.db.record_email_open_by_id(history_id);
+    let gif_1x1: [u8; 43] = [
+        0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xFF, 0xFF, 0xFF,
+        0x00, 0x00, 0x00, 0x21, 0xF9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3B,
+    ];
+    (
+        StatusCode::OK,
+        [
+            (CONTENT_TYPE, "image/gif"),
+            (CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
+        ],
+        gif_1x1.to_vec(),
+    )
+        .into_response()
+}
+
+#[derive(Deserialize)]
+struct ClickQuery {
+    url: Option<String>,
+}
+
+async fn track_click_handler(
+    State(state): State<AppState>,
+    Path(history_id): Path<i64>,
+    Query(q): Query<ClickQuery>,
+) -> Response {
+    let _ = state.db.record_email_click_by_id(history_id);
+    let target_url = q.url.unwrap_or_else(|| "https://agbtechnologies.com".to_string());
+    Redirect::temporary(&target_url).into_response()
+}
+

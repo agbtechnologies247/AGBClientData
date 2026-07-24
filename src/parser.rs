@@ -123,15 +123,31 @@ pub fn parse_html(base_url: &str, html_body: &str) -> ParsedContent {
         }
     }
 
-    // 5. Tech Stack Signals
+    // 5. Signature-Based Tech Stack Fingerprinting
     let mut tech_stack = Vec::new();
     let tech_keywords = vec![
-        ("React", vec!["react.js", "reactjs", "react"]),
+        ("React", vec!["react.js", "reactjs", "_next", "data-reactroot", "react-dom", "react"]),
+        ("Next.js", vec!["_next/static", "__next", "next-head-count"]),
+        ("Vue.js", vec!["vue.js", "vuejs", "data-v-", "__vue__"]),
+        ("Angular", vec!["angular.js", "ng-version", "ng-app", "ng-binding"]),
+        ("Svelte", vec!["svelte", "__svelte"]),
         ("Node.js", vec!["node.js", "nodejs", "express.js"]),
         ("Python", vec!["python", "django", "fastapi", "flask"]),
-        ("AWS", vec!["aws", "amazon web services", "ec2", "s3"]),
-        ("Azure", vec!["azure", "microsoft azure"]),
-        ("GCP", vec!["google cloud", "gcp"]),
+        ("WordPress", vec!["wp-content", "wp-includes", "wordpress"]),
+        ("Shopify", vec!["cdn.shopify.com", "shopify.theme", "shopify-buy"]),
+        ("Webflow", vec!["uploads-ssl.webflow.com", "w-custom-compiler"]),
+        ("HubSpot", vec!["js.hs-scripts.com", "hs-analytics", "hubspot"]),
+        ("Salesforce", vec!["salesforce", "force.com", "pardot"]),
+        ("Marketo", vec!["munchkin.marketo.net", "mktoforms2"]),
+        ("Tailwind CSS", vec!["tailwindcss", "tailwind.min.css"]),
+        ("Stripe", vec!["js.stripe.com", "stripe.com/v3"]),
+        ("Google Analytics", vec!["googletagmanager.com", "google-analytics.com", "gtag"]),
+        ("Datadog", vec!["datadoghq.com", "dd-rum"]),
+        ("Sentry", vec!["browser.sentry-cdn.com", "sentry.io"]),
+        ("Cloudflare", vec!["__cfduid", "cf-ray", "cloudflare"]),
+        ("AWS", vec!["amazonaws.com", "aws-sdk", "ec2", "s3"]),
+        ("Azure", vec!["azure.com", "microsoft azure"]),
+        ("GCP", vec!["storage.googleapis.com", "gcp"]),
         ("Kubernetes", vec!["kubernetes", "k8s"]),
         ("Docker", vec!["docker", "containerization"]),
         ("Rust", vec!["rust", "actix", "tokio"]),

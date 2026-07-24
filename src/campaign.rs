@@ -281,8 +281,8 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
             match mailer.send(email).await {
                 Ok(_) => {
                     sent_count += 1;
-                    let _ = db.record_sent_email_history(&email_addr, &person.company_name, "SENT");
-                    let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {})", email_addr, person.name, person.title));
+                    let history_id = db.record_sent_email_history(&email_addr, &person.company_name, "SENT").unwrap_or(0);
+                    let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {}) [ID: {}]", email_addr, person.name, person.title, history_id));
                 }
                 Err(e) => {
                     let _ = db.record_sent_email_history(&email_addr, &person.company_name, "FAILED");
@@ -383,8 +383,8 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
             match mailer.send(email).await {
                 Ok(_) => {
                     sent_count += 1;
-                    let _ = db.record_sent_email_history(&email_addr, &inv.name, "SENT");
-                    let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {})", email_addr, inv.name, inv.investor_type));
+                    let history_id = db.record_sent_email_history(&email_addr, &inv.name, "SENT").unwrap_or(0);
+                    let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {}) [ID: {}]", email_addr, inv.name, inv.investor_type, history_id));
                 }
                 Err(e) => {
                     let _ = db.record_sent_email_history(&email_addr, &inv.name, "FAILED");
@@ -480,8 +480,8 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
             match mailer.send(email).await {
                 Ok(_) => {
                     sent_count += 1;
-                    let _ = db.record_sent_email_history(&email_addr, &company.name, "SENT");
-                    let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {}", email_addr));
+                    let history_id = db.record_sent_email_history(&email_addr, &company.name, "SENT").unwrap_or(0);
+                    let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {} [ID: {}]", email_addr, history_id));
                 }
                 Err(e) => {
                     let _ = db.record_sent_email_history(&email_addr, &company.name, "FAILED");
