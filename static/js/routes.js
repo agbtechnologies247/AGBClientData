@@ -8,7 +8,7 @@ export function initRoutes(onTabChange) {
         tabPipeline: 'Multi-Stage Leads Qualification Pipeline',
         tabPeople: 'Verified Decision Makers & Executive Contacts',
         tabInvestors: 'Verified B2B SaaS & AI Investors',
-        tabOutreach: 'Sent Email History & Delivery Status',
+        tabCampaigns: 'Sent Email History & Delivery Status',
         tabCrawler: 'Anti-Blocking Stealth Crawler Config',
         tabProxies: 'Anti-Blocking Proxy Rotation Pool',
         tabLogs: 'Live Crawler Console Logs'
@@ -17,14 +17,17 @@ export function initRoutes(onTabChange) {
     navItems.forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            const tabId = item.getAttribute('data-tab');
+            const rawTabId = item.getAttribute('data-tab') || 'dashboard';
+            const tabId = rawTabId.startsWith('tab') ? rawTabId : `tab${rawTabId.charAt(0).toUpperCase() + rawTabId.slice(1)}`;
 
             navItems.forEach(n => n.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
 
             item.classList.add('active');
             const targetTab = document.getElementById(tabId);
-            if (targetTab) targetTab.classList.add('active');
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
 
             if (pageHeading && headings[tabId]) {
                 pageHeading.innerText = headings[tabId];
