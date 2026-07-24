@@ -267,20 +267,12 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                 })
                 .to(match email_addr.parse() {
                     Ok(t) => t,
-                    Err(e) => {
+                    Err(_) => {
                         let _ = db.record_sent_email_history(&email_addr, &person.company_name, "INVALID");
                         continue;
                     }
                 })
                 .subject(&subject)
-                .header(lettre::message::header::Custom::new(
-                    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe"),
-                    "<mailto:support@agbtechnologies.com?subject=Unsubscribe>".to_string(),
-                ))
-                .header(lettre::message::header::Custom::new(
-                    lettre::message::header::HeaderName::new_from_ascii_str("X-Mailer"),
-                    "AGB-Enterprise-Outreach/2.1".to_string(),
-                ))
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,
@@ -365,7 +357,7 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                     Ok(f) => f,
                     Err(_) => match config.sender_email.parse() {
                         Ok(f) => f,
-                        Err(e) => continue,
+                        Err(_) => continue,
                     },
                 })
                 .reply_to(match "support@agbtechnologies.com".parse() {
@@ -383,14 +375,6 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                     }
                 })
                 .subject(&subject)
-                .header(lettre::message::header::Custom::new(
-                    lettre::message::header::HeaderName::new_from_ascii_str("List-Unsubscribe"),
-                    "<mailto:support@agbtechnologies.com?subject=Unsubscribe>".to_string(),
-                ))
-                .header(lettre::message::header::Custom::new(
-                    lettre::message::header::HeaderName::new_from_ascii_str("X-Mailer"),
-                    "AGB-Enterprise-Outreach/2.1".to_string(),
-                ))
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,

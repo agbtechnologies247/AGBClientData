@@ -154,7 +154,7 @@ mod tests {
         assert!(body.contains("A.L.F.R.E.D."));
         assert!(body.contains("BillSoft"));
         assert!(body.contains("Bhramit Pardhi [Shubham]"));
-        assert!(body.contains("agbtechnologies247@gmail.com"));
+        assert!(body.contains("support@agbtechnologies.com"));
         assert!(body.contains("+91 9049874780"));
 
         let (personalized_sub, personalized_body) = CampaignEngine::personalize_template(
