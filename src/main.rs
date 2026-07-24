@@ -22,7 +22,7 @@ use proxy::ProxyManager;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 use tracing::info;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -76,8 +76,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allow_methods(Any)
         .allow_headers(Any);
 
+    let static_service = ServeDir::new("static")
+        .fallback(ServeFile::new("static/index.html"));
+
     let app = create_router(app_state)
-        .nest_service("/", ServeDir::new("static"))
+        .fallback_service(static_service)
         .layer(cors);
 
     let port: u16 = std::env::var("PORT")
