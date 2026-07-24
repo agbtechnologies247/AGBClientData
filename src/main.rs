@@ -44,6 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let initial_proxies = vec![];
     let proxy_mgr = ProxyManager::new(initial_proxies);
+    proxy_mgr.load_proxies_from_db(&db).await;
 
     let crawler = Arc::new(AntiBlockingCrawler::new(db.clone(), proxy_mgr.clone()));
 

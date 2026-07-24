@@ -153,6 +153,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Modal Close Handlers
+    document.getElementById('btnCloseModal')?.addEventListener('click', () => {
+        document.getElementById('leadModal')?.classList.remove('active');
+    });
+
+    document.getElementById('btnCloseValidateModal')?.addEventListener('click', () => {
+        document.getElementById('validateLeadModal')?.classList.remove('active');
+    });
+
+    document.getElementById('btnCloseHtmlModal')?.addEventListener('click', () => {
+        document.getElementById('htmlPreviewModal')?.classList.remove('active');
+    });
+
     // Clear Database Button
     document.getElementById('btnClearDatabaseBtn')?.addEventListener('click', async () => {
         if (!confirm("Are you sure you want to clear all existing crawled leads and restore baseline data?")) {

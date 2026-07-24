@@ -224,28 +224,25 @@ impl Database {
 
         }
 
-        // Auto-seed proxies from Free_Proxy_List.json if available
-        let proxy_count: i64 = conn.query_row("SELECT COUNT(*) FROM proxies", [], |r| r.get(0)).unwrap_or(0);
-        if proxy_count == 0 {
-            if let Ok(content) = std::fs::read_to_string("Free_Proxy_List.json") {
-                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-                    if let Some(arr) = val.as_array() {
-                        for p in arr {
-                            let ip = p["ip"].as_str().unwrap_or("");
-                            let port = p["port"].as_str().unwrap_or("");
-                            let proto = p["protocols"].as_array()
-                                .and_then(|a| a.first())
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("http");
-                            let latency = p["latency"].as_f64().unwrap_or(500.0) as i64;
+        // Sync proxies from Free_Proxy_List.json if available
+        if let Ok(content) = std::fs::read_to_string("Free_Proxy_List.json") {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(arr) = val.as_array() {
+                    for p in arr {
+                        let ip = p["ip"].as_str().unwrap_or("");
+                        let port = p["port"].as_str().unwrap_or("");
+                        let proto = p["protocols"].as_array()
+                            .and_then(|a| a.first())
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("http");
+                        let latency = p["latency"].as_f64().unwrap_or(500.0) as i64;
 
-                            if !ip.is_empty() && !port.is_empty() {
-                                let proxy_url = format!("{}://{}:{}", proto, ip, port);
-                                let _ = conn.execute(
-                                    "INSERT OR IGNORE INTO proxies (url, protocol, active, latency_ms) VALUES (?1, ?2, 1, ?3)",
-                                    params![proxy_url, proto, latency],
-                                );
-                            }
+                        if !ip.is_empty() && !port.is_empty() {
+                            let proxy_url = format!("{}://{}:{}", proto, ip, port);
+                            let _ = conn.execute(
+                                "INSERT OR IGNORE INTO proxies (url, protocol, active, latency_ms) VALUES (?1, ?2, 1, ?3)",
+                                params![proxy_url, proto, latency],
+                            );
                         }
                     }
                 }

@@ -43,6 +43,17 @@ impl ProxyManager {
         }
     }
 
+    pub async fn load_proxies_from_db(&self, db: &crate::db::Database) {
+        if let Ok(proxies) = db.get_proxies() {
+            let active_urls: Vec<String> = proxies.into_iter()
+                .filter(|p| p.active)
+                .map(|p| p.url)
+                .collect();
+            let mut list = self.proxies.write().await;
+            *list = active_urls;
+        }
+    }
+
     pub async fn active_count(&self) -> usize {
         self.proxies.read().await.len()
     }
