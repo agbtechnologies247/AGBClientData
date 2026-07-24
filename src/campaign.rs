@@ -57,11 +57,11 @@ pub struct HostingerSmtpConfig {
 impl Default for HostingerSmtpConfig {
     fn default() -> Self {
         Self {
-            smtp_host: "smtp.hostinger.com".to_string(),
-            smtp_port: 465,
-            sender_email: "support@agbtechnologies.com".to_string(),
-            sender_name: "Bhramit Pardhi [Shubham]".to_string(),
-            auth_password: "Bhramit@143".to_string(),
+            smtp_host: std::env::var("SMTP_HOST").unwrap_or_else(|_| "smtp.hostinger.com".to_string()),
+            smtp_port: std::env::var("SMTP_PORT").unwrap_or_else(|_| "465".to_string()).parse().unwrap_or(465),
+            sender_email: std::env::var("SENDER_EMAIL").unwrap_or_else(|_| "support@agbtechnologies.com".to_string()),
+            sender_name: std::env::var("SENDER_NAME").unwrap_or_else(|_| "Bhramit Pardhi [Shubham]".to_string()),
+            auth_password: std::env::var("AUTH_PASSWORD").unwrap_or_else(|_| "Bhramit@143".to_string()),
         }
     }
 }
@@ -105,9 +105,12 @@ Kind regards,
 
 Bhramit Pardhi [Shubham]
 Founder, AGB Technologies
+Email: support@agbtechnologies.com
+Phone: +91 9049874780
 
-Email: agbtechnologies247@gmail.com
-Phone: +91 9049874780"#.to_string();
+---
+If you prefer not to receive future communications, please reply with "UNSUBSCRIBE" or email support@agbtechnologies.com.
+"#.to_string();
 
         (subject, body)
     }
@@ -159,8 +162,12 @@ Kind regards,
 
 Bhramit Pardhi [Shubham]
 Founder, AGB Technologies
-Email: agbtechnologies247@gmail.com
-Phone: +91 9049874780"#.to_string();
+Email: support@agbtechnologies.com
+Phone: +91 9049874780
+
+---
+If you prefer not to receive future communications, please reply with "UNSUBSCRIBE" or email support@agbtechnologies.com.
+"#.to_string();
 
         (subject, body)
     }
@@ -266,6 +273,8 @@ Phone: +91 9049874780"#.to_string();
                     }
                 })
                 .subject(&subject)
+                .header(lettre::message::header::HeaderName::new_unchecked("List-Unsubscribe"), "<mailto:support@agbtechnologies.com?subject=Unsubscribe>")
+                .header(lettre::message::header::HeaderName::new_unchecked("X-Mailer"), "AGB-Enterprise-Outreach/2.1")
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,
@@ -353,14 +362,23 @@ Phone: +91 9049874780"#.to_string();
                         Err(e) => continue,
                     },
                 })
+                .reply_to(match "support@agbtechnologies.com".parse() {
+                    Ok(r) => r,
+                    Err(_) => match config.sender_email.parse() {
+                        Ok(r) => r,
+                        Err(_) => continue,
+                    },
+                })
                 .to(match email_addr.parse() {
                     Ok(t) => t,
-                    Err(e) => {
+                    Err(_) => {
                         let _ = db.record_sent_email_history(&email_addr, &inv.name, "INVALID");
                         continue;
                     }
                 })
                 .subject(&subject)
+                .header(lettre::message::header::HeaderName::new_unchecked("List-Unsubscribe"), "<mailto:support@agbtechnologies.com?subject=Unsubscribe>")
+                .header(lettre::message::header::HeaderName::new_unchecked("X-Mailer"), "AGB-Enterprise-Outreach/2.1")
                 .body(body) {
                     Ok(m) => m,
                     Err(_) => continue,

@@ -10,8 +10,24 @@ services:
       - PORT=8080
       - RUST_LOG=info
       - DATABASE_PATH=/app/data/marketing_leads.db
+      - SMTP_HOST=smtp.hostinger.com
+      - SMTP_PORT=465
+      - SENDER_EMAIL=support@agbtechnologies.com
+      - SENDER_NAME=Bhramit Pardhi [Shubham]
+      - AUTH_PASSWORD=Bhramit@143
     volumes:
       - crawler_data:/app/data
+    restart: unless-stopped
+
+  postfix_relay:
+    image: juanluisbaptiste/postfix:latest
+    container_name: local_postfix_relay
+    environment:
+      - SMTP_SERVER=smtp.hostinger.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=support@agbtechnologies.com
+      - SMTP_PASSWORD=Bhramit@143
+      - SERVER_HOSTNAME=mail.agbtechnologies.com
     restart: unless-stopped
 
 volumes:
