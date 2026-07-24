@@ -150,9 +150,6 @@ impl AntiBlockingCrawler {
     }
 
     pub async fn start_crawl(&self, seed_urls: Vec<String>, mode: Option<String>) {
-        if self.is_running.load(Ordering::SeqCst) {
-            return;
-        }
 
         let concurrency = if let Some(ref m) = mode {
             let mut s = self.settings.write().await;

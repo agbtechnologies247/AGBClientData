@@ -62,6 +62,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadLeads();
 
+    // Auto-refresh stats & crawler status badge every 5 seconds
+    setInterval(loadStats, 5000);
+
     // Initialize Routes & Tab Switcher for ALL 8 modules
     initRoutes((tabId) => {
         const t = tabId.startsWith('tab') ? tabId : `tab${tabId.charAt(0).toUpperCase() + tabId.slice(1)}`;
