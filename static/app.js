@@ -446,14 +446,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
             allItems.forEach(item => {
                 const tr = document.createElement('tr');
-                const badgeClass = item.status === 'SENT' ? 'badge-high' : (item.status === 'REPLIED' ? 'badge-high' : 'badge-low');
                 const relTime = formatRelativeTime(item.sent_at);
                 const fullTime = item.sent_at.slice(0, 19).replace('T', ' ');
+
+                let badgeHtml = '<span class="badge badge-high">' + item.status + '</span>';
+                if (item.status === 'DELIVERED') {
+                    badgeHtml = '<span class="badge" style="background:#10B981; color:#FFF; font-weight:600;"><i class="fa-solid fa-circle-check"></i> DELIVERED</span>';
+                } else if (item.status === 'SENT') {
+                    badgeHtml = '<span class="badge" style="background:#3B82F6; color:#FFF; font-weight:600;"><i class="fa-solid fa-paper-plane"></i> SENT</span>';
+                } else if (item.status === 'BOUNCED') {
+                    badgeHtml = '<span class="badge" style="background:#EF4444; color:#FFF; font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> BOUNCED</span>';
+                } else if (item.status === 'FAILED') {
+                    badgeHtml = '<span class="badge" style="background:#DC2626; color:#FFF; font-weight:600;"><i class="fa-solid fa-xmark"></i> FAILED</span>';
+                } else if (item.status === 'INVALID') {
+                    badgeHtml = '<span class="badge" style="background:#6B7280; color:#FFF; font-weight:600;">INVALID</span>';
+                } else if (item.status === 'REPLIED') {
+                    badgeHtml = '<span class="badge" style="background:#8B5CF6; color:#FFF; font-weight:600;"><i class="fa-solid fa-reply"></i> REPLIED</span>';
+                }
 
                 tr.innerHTML = `
                     <td><strong>${item.recipient_email}</strong></td>
                     <td>${item.company_name}</td>
-                    <td><span class="badge ${badgeClass}">${item.status}</span></td>
+                    <td>${badgeHtml}</td>
                     <td>
                         <span style="font-weight:600; color:var(--text-primary);">${relTime}</span>
                         <br><small style="color:var(--text-muted); font-size:11px;">${fullTime}</small>
@@ -857,12 +871,14 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = '';
 
             const stages = [
-                { id: 'DISCOVERED', name: 'Discovered Target' },
-                { id: 'ENRICHED', name: 'Enriched & Verified' },
-                { id: 'CONTACTED', name: 'Outreach Contacted' },
-                { id: 'QUALIFIED', name: 'Qualified Lead' },
-                { id: 'PROPOSAL', name: 'Proposal Sent' },
-                { id: 'WON', name: 'Deal Won ✓' }
+                { id: 'DISCOVERED', name: 'Discovered' },
+                { id: 'ENRICHED', name: 'Enriched' },
+                { id: 'CONTACTED', name: 'Contacted' },
+                { id: 'QUALIFIED', name: 'Qualified' },
+                { id: 'PROPOSAL', name: 'Proposal' },
+                { id: 'CANCELLED', name: 'Cancelled ✖' },
+                { id: 'REJECTED', name: 'Rejected ✖' },
+                { id: 'WON', name: 'Won ✓' }
             ];
 
             stages.forEach(st => {

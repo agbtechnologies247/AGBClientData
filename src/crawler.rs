@@ -113,11 +113,11 @@ impl AntiBlockingCrawler {
         ];
 
         loop {
-            if !self.is_running() {
-                // 1. Pop un-crawled pending domains from SQLite queue
-                match self.db.pop_pending_queue_domains(15) {
+            if self.is_running() {
+                // 1. Pop un-crawled pending domains from SQLite queue in batches of 10
+                match self.db.pop_pending_queue_domains(10) {
                     Ok(queued) if !queued.is_empty() => {
-                        let _ = self.db.log_event("INFO", "DAEMON", &format!("Popped {} pending domains from queue for continuous crawling.", queued.len()));
+                        let _ = self.db.log_event("INFO", "DAEMON", &format!("Popped batch of {} unique pending domains for stealth crawling.", queued.len()));
                         self.start_crawl(queued, Some("stealth".to_string())).await;
                     }
                     _ => {
@@ -134,16 +134,18 @@ impl AntiBlockingCrawler {
                             .collect();
 
                         if !uncrawled_seeds.is_empty() {
-                            let _ = self.db.log_event("INFO", "DAEMON", &format!("Launching batch of {} uncrawled seed targets.", uncrawled_seeds.len()));
-                            self.start_crawl(uncrawled_seeds, Some("stealth".to_string())).await;
+                            let batch_seeds: Vec<String> = uncrawled_seeds.into_iter().take(10).collect();
+                            let _ = self.db.log_event("INFO", "DAEMON", &format!("Launching batch of {} uncrawled seed targets.", batch_seeds.len()));
+                            self.start_crawl(batch_seeds, Some("stealth".to_string())).await;
                         } else {
-                            // Cycle default seeds to refresh intelligence
-                            self.start_crawl(default_seeds.clone(), Some("stealth".to_string())).await;
+                            // Cycle default seeds to refresh intelligence in 10-domain batches
+                            let batch_seeds: Vec<String> = default_seeds.iter().take(10).cloned().collect();
+                            self.start_crawl(batch_seeds, Some("stealth".to_string())).await;
                         }
                     }
                 }
             }
-            sleep(Duration::from_secs(30)).await;
+            sleep(Duration::from_secs(3)).await;
         }
     }
 
