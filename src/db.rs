@@ -988,6 +988,87 @@ impl Database {
         Ok(leads)
     }
 
+    pub fn get_unsent_people_batch(&self, limit: usize) -> Result<Vec<Person>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, company_id, company_name, company_domain, name, title, normalized_role, decision_maker_score, public_email, linkedin_url, confidence_score
+             FROM people
+             WHERE public_email IS NOT NULL AND public_email != ''
+             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             ORDER BY decision_maker_score DESC, id DESC
+             LIMIT ?"
+        )?;
+
+        let p_iter = stmt.query_map(params![limit as i64], |r| {
+            Ok(Person {
+                id: r.get(0)?,
+                company_id: r.get(1)?,
+                company_name: r.get(2)?,
+                company_domain: r.get(3)?,
+                name: r.get(4)?,
+                title: r.get(5)?,
+                normalized_role: r.get(6)?,
+                decision_maker_score: r.get(7)?,
+                public_email: r.get(8)?,
+                linkedin_url: r.get(9)?,
+                confidence_score: r.get(10)?,
+            })
+        })?;
+
+        let mut people = Vec::new();
+        for p in p_iter {
+            people.push(p?);
+        }
+        Ok(people)
+    }
+
+    pub fn get_unsent_investors_batch(&self, limit: usize) -> Result<Vec<Investor>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, name, investor_type, website, country, city, focus, stages, check_size, public_email, linkedin_url, portfolio_highlights, recent_investments, score, priority_tier, last_updated
+             FROM investors
+             WHERE public_email IS NOT NULL AND public_email != ''
+             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             ORDER BY score DESC, id DESC
+             LIMIT ?"
+        )?;
+
+        let inv_iter = stmt.query_map(params![limit as i64], |r| {
+            let focus_str: String = r.get(6)?;
+            let stages_str: String = r.get(7)?;
+            let port_str: String = r.get(11)?;
+
+            let focus: Vec<String> = serde_json::from_str(&focus_str).unwrap_or_default();
+            let stages: Vec<String> = serde_json::from_str(&stages_str).unwrap_or_default();
+            let portfolio_highlights: Vec<String> = serde_json::from_str(&port_str).unwrap_or_default();
+
+            Ok(Investor {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                investor_type: r.get(2)?,
+                website: r.get(3)?,
+                country: r.get(4)?,
+                city: r.get(5)?,
+                focus,
+                stages,
+                check_size: r.get(8)?,
+                public_email: r.get(9)?,
+                linkedin_url: r.get(10)?,
+                portfolio_highlights,
+                recent_investments: r.get(12)?,
+                score: r.get(13)?,
+                priority_tier: r.get(14)?,
+                last_updated: r.get(15)?,
+            })
+        })?;
+
+        let mut investors = Vec::new();
+        for inv in inv_iter {
+            investors.push(inv?);
+        }
+        Ok(investors)
+    }
+
     pub fn get_sent_emails_history(&self, status_filter: Option<&str>, page: usize, limit: usize) -> Result<(Vec<(i64, String, String, String, String)>, usize)> {
         let conn = self.conn.lock().unwrap();
         let page = if page < 1 { 1 } else { page };

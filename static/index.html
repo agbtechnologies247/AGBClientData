@@ -391,6 +391,14 @@
 
                             <form id="formCreateCampaign" class="form-grid">
                                 <div class="form-group">
+                                    <label>Target Audience Category</label>
+                                    <select id="campaignTargetCategory" style="padding:10px; border-radius:8px; border:1px solid var(--border-color); background:var(--bg-subtle); color:var(--text-primary); font-weight:600;">
+                                        <option value="PEOPLE" selected>Ranked Decision Makers & Executives (CTO, VP Eng, CEO)</option>
+                                        <option value="INVESTORS">Verified B2B SaaS & AI Investors (Angels, Micro VCs)</option>
+                                        <option value="ALL">All Target Categories (Decision Makers + Investors)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label>Campaign Name / Subject</label>
                                     <input type="text" id="campaignSubject" value="Enterprise Operations & Business Management Platform Demo - AGB Technologies" required>
                                 </div>
@@ -634,6 +642,6 @@ Phone: +91 9049874780</textarea>
         </div>
     </div>
 
-    <script type="module" src="app.js?v=2.0.5"></script>
+    <script type="module" src="app.js?v=2.0.7"></script>
 </body>
 </html>

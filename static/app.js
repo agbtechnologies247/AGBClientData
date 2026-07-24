@@ -81,10 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Trigger Outreach Batch Now
     document.getElementById('btnTriggerOutreachBatch')?.addEventListener('click', async () => {
+        const category = document.getElementById('campaignTargetCategory')?.value || 'PEOPLE';
         try {
-            const res = await fetch(API_ENDPOINTS.OUTREACH_TRIGGER, { method: 'POST' });
+            const res = await fetch(API_ENDPOINTS.OUTREACH_TRIGGER, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_category: category, limit: 1000 })
+            });
             if (res.ok) {
-                showToast("Hostinger SMTP outreach batch triggered!");
+                showToast(`Hostinger SMTP outreach batch of 1,000 emails triggered for ${category}!`);
                 setTimeout(loadOutreachHistory, 2000);
             }
         } catch (err) {

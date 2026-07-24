@@ -414,16 +414,41 @@ async fn clear_database_handler(State(state): State<AppState>) -> Response {
     }
 }
 
-async fn trigger_outreach_handler(State(state): State<AppState>) -> Response {
+#[derive(Debug, Clone, Deserialize)]
+pub struct TriggerOutreachRequest {
+    pub target_category: Option<String>,
+    pub limit: Option<usize>,
+}
+
+async fn trigger_outreach_handler(
+    State(state): State<AppState>,
+    payload: Option<Json<TriggerOutreachRequest>>,
+) -> Response {
+    let req = payload.map(|p| p.0).unwrap_or_else(|| TriggerOutreachRequest { target_category: Some("PEOPLE".to_string()), limit: Some(1000) });
+    let category = req.target_category.unwrap_or_else(|| "PEOPLE".to_string());
+    let limit = req.limit.unwrap_or(1000);
     let db = state.db.clone();
+
     tokio::spawn(async move {
-        let _ = crate::campaign::CampaignEngine::dispatch_outreach_batch(&db, 15).await;
+        match category.to_uppercase().as_str() {
+            "INVESTORS" => {
+                let _ = crate::campaign::CampaignEngine::dispatch_investor_outreach_batch(&db, limit).await;
+            }
+            "PEOPLE" => {
+                let _ = crate::campaign::CampaignEngine::dispatch_people_outreach_batch(&db, limit).await;
+            }
+            _ => {
+                let _ = crate::campaign::CampaignEngine::dispatch_outreach_batch(&db, limit).await;
+            }
+        }
     });
+
     (
         StatusCode::OK,
         Json(json!({
             "status": "DISPATCHING",
-            "message": "Hostinger SMTP outreach batch triggered asynchronously."
+            "category": category,
+            "message": format!("Hostinger SMTP outreach batch triggered for category: {}", category)
         })),
     )
         .into_response()
