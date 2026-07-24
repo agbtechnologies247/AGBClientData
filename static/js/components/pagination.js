@@ -1,6 +1,7 @@
-/**
- * SOLID Component - Reusable Pagination Renderer
- */
+export function renderPaginationUI(prefix, totalCount, page, limit, onPageChange) {
+    PaginationComponent.render(prefix, totalCount, page, limit, onPageChange);
+}
+
 export class PaginationComponent {
     static render(prefix, totalCount, page, limit, onPageChange) {
         const rangeEl = document.getElementById(`${prefix}Range`);
