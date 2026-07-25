@@ -44,9 +44,49 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/logs", get(get_logs_handler))
         .route("/api/logs/clear", post(clear_logs_handler))
         .route("/api/leads/export", get(export_leads_handler))
+        .route("/api/monitoring", get(get_monitoring_handler))
         .route("/api/track/open/:id", get(track_open_handler))
         .route("/api/track/click/:id", get(track_click_handler))
         .with_state(state)
+}
+
+async fn get_monitoring_handler(State(state): State<AppState>) -> Response {
+    let stats_res = state.db.get_stats();
+    let is_crawler_active = state.crawler.is_running();
+    let current_domain = state.crawler.current_domain().await;
+    let proxy_count = state.proxy_mgr.active_count().await;
+
+    match stats_res {
+        Ok(stats) => (
+            StatusCode::OK,
+            Json(json!({
+                "status": "HEALTHY",
+                "crawler": {
+                    "active": is_crawler_active,
+                    "mode": "STEALTH",
+                    "current_domain": current_domain,
+                    "total_crawled_pages": stats.total_crawled_pages
+                },
+                "outreach": {
+                    "active": true,
+                    "dispatched_count": stats.leads_with_email,
+                    "hostinger_smtp": "smtp.hostinger.com:465"
+                },
+                "proxies": {
+                    "active_pool_size": proxy_count
+                },
+                "database": {
+                    "total_companies": stats.total_companies,
+                    "total_people": stats.total_decision_makers,
+                    "total_investors": stats.total_investors
+                }
+            })),
+        ).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"status": "UNHEALTHY", "error": e.to_string()})),
+        ).into_response(),
+    }
 }
 
 async fn get_stats_handler(State(state): State<AppState>) -> Response {

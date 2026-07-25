@@ -225,7 +225,44 @@ impl Database {
                     params![c.1, now],
                 )?;
             }
+        }
 
+        // Seed initial target domains into crawl_queue if empty
+        let queue_count: i64 = conn.query_row("SELECT COUNT(*) FROM crawl_queue WHERE status = 'PENDING'", [], |r| r.get(0)).unwrap_or(0);
+        if queue_count < 10 {
+            let initial_targets = vec![
+                ("thoughtworks.com", "https://thoughtworks.com"),
+                ("epam.com", "https://epam.com"),
+                ("endava.com", "https://endava.com"),
+                ("globant.com", "https://globant.com"),
+                ("griddynamics.com", "https://griddynamics.com"),
+                ("kinandcarta.com", "https://kinandcarta.com"),
+                ("nearform.com", "https://nearform.com"),
+                ("datadog.com", "https://datadog.com"),
+                ("snowflake.com", "https://snowflake.com"),
+                ("confluent.io", "https://confluent.io"),
+                ("hashicorp.com", "https://hashicorp.com"),
+                ("mongodb.com", "https://mongodb.com"),
+                ("elastic.co", "https://elastic.co"),
+                ("cloudflare.com", "https://cloudflare.com"),
+                ("fastly.com", "https://fastly.com"),
+                ("twilio.com", "https://twilio.com"),
+                ("sendgrid.com", "https://sendgrid.com"),
+                ("stripe.com", "https://stripe.com"),
+                ("adyen.com", "https://adyen.com"),
+                ("checkout.com", "https://checkout.com"),
+                ("newrelic.com", "https://newrelic.com"),
+                ("pagerduty.com", "https://pagerduty.com"),
+                ("sentry.io", "https://sentry.io"),
+                ("launchdarkly.com", "https://launchdarkly.com"),
+                ("segment.com", "https://segment.com"),
+            ];
+            for (dom, target_url) in initial_targets {
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO crawl_queue (domain, url, depth, status) VALUES (?1, ?2, 0, 'PENDING')",
+                    params![dom, target_url],
+                );
+            }
         }
 
         // Sync proxies from Free_Proxy_List.json if available
@@ -935,6 +972,26 @@ impl Database {
         }
 
         Ok(urls)
+    }
+
+    pub fn is_email_in_companies(&self, email: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM companies WHERE email = ?1",
+            params![email.trim()],
+            |r| r.get(0),
+        ).unwrap_or(0);
+        Ok(count > 0)
+    }
+
+    pub fn is_email_in_people(&self, email: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        let count: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM people WHERE public_email = ?1",
+            params![email.trim()],
+            |r| r.get(0),
+        ).unwrap_or(0);
+        Ok(count > 0)
     }
 
     pub fn is_email_already_sent(&self, email: &str) -> Result<bool> {

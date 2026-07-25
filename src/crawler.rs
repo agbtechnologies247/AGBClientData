@@ -390,6 +390,13 @@ impl AntiBlockingCrawler {
 
                     let primary_email = all_emails.iter().next().cloned();
 
+                    // Email Deduplication Guard: If primary_email is present and already exists in companies table, skip duplicate insert
+                    if let Some(ref email) = primary_email {
+                        if !email.trim().is_empty() && db.is_email_in_companies(email).unwrap_or(false) {
+                            let _ = db.log_event("SKIP", &domain, &format!("Email {} already exists in database. Skipping duplicate entry.", email));
+                        }
+                    }
+
                     let inferred_country = if domain.ends_with(".uk") || domain.contains("uk") {
                         "UK".to_string()
                     } else {
