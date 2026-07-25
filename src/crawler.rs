@@ -182,7 +182,7 @@ impl AntiBlockingCrawler {
         self.execute_crawl_batch(seed_urls, mode, true).await;
     }
 
-    async fn execute_crawl_batch(&self, seed_urls: Vec<String>, mode: Option<String>, force_recrawl: bool) {
+    pub async fn execute_crawl_batch(&self, seed_urls: Vec<String>, mode: Option<String>, force_recrawl: bool) {
         let concurrency = if let Some(ref m) = mode {
             let mut s = self.settings.write().await;
             s.mode = m.clone();
@@ -261,21 +261,43 @@ impl AntiBlockingCrawler {
                         .build()
                         .ok();
 
-                        let active_proxy_url = proxy_mgr.get_next_proxy().await;
-                        let proxy_client = if let Some(ref p_url) = active_proxy_url {
-                            if let Ok(proxy) = Proxy::all(p_url) {
-                                Client::builder()
-                                    .timeout(Duration::from_secs(5))
-                                    .danger_accept_invalid_certs(true)
-                                    .default_headers(proxy_mgr.build_stealth_headers())
-                                    .proxy(proxy)
-                                    .build()
-                                    .ok()
-                            } else {
-                                None
-                            }
+                    let active_proxy_url = proxy_mgr.get_next_proxy().await;
+                    let proxy_client = if let Some(ref p_url) = active_proxy_url {
+                        if let Ok(proxy) = Proxy::all(p_url) {
+                            Client::builder()
+                                .timeout(Duration::from_secs(5))
+                                .danger_accept_invalid_certs(true)
+                                .default_headers(proxy_mgr.build_stealth_headers())
+                                .proxy(proxy)
+                                .build()
+                                .ok()
                         } else {
                             None
+                        }
+                    } else {
+                        None
+                    };
+
+                    let mut all_emails = HashSet::new();
+                    let mut contact_subpage = None;
+                    let mut linkedin_url = None;
+                    let mut hiring_signals = Vec::new();
+                    let mut engineering_jobs = 0;
+                    let mut remote_jobs = 0;
+                    let mut outsourcing_keywords = 0;
+                    let mut tech_stack = Vec::new();
+                    let mut extracted_people = Vec::new();
+                    let mut pages_crawled = 0;
+
+                    let max_pages = settings.read().await.max_pages_per_domain.min(4);
+                    let target_subpaths = vec!["", "/contact", "/about", "/careers"];
+
+                    for subpath in target_subpaths {
+                        if pages_crawled >= max_pages { break; }
+                        let crawl_target = if subpath.is_empty() {
+                            url.clone()
+                        } else {
+                            format!("https://{}{}", domain, subpath)
                         };
 
                         let mut html_opt = None;

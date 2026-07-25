@@ -325,4 +325,27 @@ mod tests {
         assert_eq!(api_resp.results.len(), 1);
         assert_eq!(api_resp.results[0].title, "Top B2B SaaS Companies 2026");
     }
+
+    #[tokio::test]
+    async fn test_live_server_side_crawler_execution() {
+        use crate::db::Database;
+        use crate::proxy::ProxyManager;
+        use crate::crawler::AntiBlockingCrawler;
+
+        let db = Database::new(":memory:").unwrap();
+        db.seed_data_if_empty().unwrap();
+
+        let proxy_mgr = ProxyManager::new(vec![]);
+        let crawler = AntiBlockingCrawler::new(db.clone(), proxy_mgr);
+
+        // Enqueue a test target domain
+        db.enqueue_domain("thoughtworks.com", "https://thoughtworks.com").unwrap();
+
+        // Run crawler batch execution
+        crawler.execute_crawl_batch(vec!["https://thoughtworks.com".to_string()], None, true).await;
+
+        let stats = db.get_stats().unwrap();
+        println!("[Server-Side Crawl Success] Total Companies: {}", stats.total_companies);
+        assert!(stats.total_companies >= 7);
+    }
 }
