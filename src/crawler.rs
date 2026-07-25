@@ -56,6 +56,7 @@ impl AntiBlockingCrawler {
 
     /// Continuous Infinite Daemon Loop: target B2B IT & Service companies 24/7
     pub async fn start_daemon_loop(&self) {
+        self.is_running.store(true, Ordering::SeqCst);
         let _ = self.db.log_event("INFO", "DAEMON", "Continuous 24/7 Market Lead Intelligence Crawl Daemon activated.");
 
         let default_seeds = vec![
