@@ -230,100 +230,103 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                 .build()
         );
 
-        stream::iter(unsent_people)
-            .for_each_concurrent(5, |person| {
-                let mailer = mailer.clone();
-                let fallback_mailer = fallback_mailer.clone();
-                let validator = validator.clone();
-                let db = db_arc.clone();
-                let config = config_arc.clone();
-                let sent_count = sent_count.clone();
-                let default_subject = default_subject.clone();
-                let default_body = default_body.clone();
+        for chunk in unsent_people.chunks(5) {
+            stream::iter(chunk.to_vec())
+                .for_each_concurrent(5, |person| {
+                    let mailer = mailer.clone();
+                    let fallback_mailer = fallback_mailer.clone();
+                    let validator = validator.clone();
+                    let db = db_arc.clone();
+                    let config = config_arc.clone();
+                    let sent_count = sent_count.clone();
+                    let default_subject = default_subject.clone();
+                    let default_body = default_body.clone();
 
-                async move {
-                    let email_addr = match person.public_email.clone() {
-                        Some(e) if !e.trim().is_empty() => e.trim().to_string(),
-                        _ => return,
-                    };
-
-                    if db.is_email_already_sent(&email_addr).unwrap_or(false) {
-                        return;
-                    }
-
-                    if !ContactValidator::validate_email_syntax(&email_addr) {
-                        let _ = db.record_sent_email_history(&email_addr, &person.company_name, "INVALID");
-                        return;
-                    }
-
-                    if let Some(domain_part) = email_addr.split('@').nth(1) {
-                        if !validator.verify_mx_record(domain_part).await {
-                            let _ = db.record_sent_email_history(&email_addr, &person.company_name, "BOUNCED");
-                            return;
-                        }
-                    }
-
-                    let (subject, body) = Self::personalize_template(
-                        &default_subject,
-                        &default_body,
-                        &person.name,
-                        &person.company_name,
-                        &person.title,
-                    );
-
-                    let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
-
-                    let email = match Message::builder()
-                        .from(match from_header.parse() {
-                            Ok(f) => f,
-                            Err(_) => match config.sender_email.parse() {
-                                Ok(f) => f,
-                                Err(_) => return,
-                            },
-                        })
-                        .reply_to(match "support@agbtechnologies.com".parse() {
-                            Ok(r) => r,
-                            Err(_) => match config.sender_email.parse() {
-                                Ok(r) => r,
-                                Err(_) => return,
-                            },
-                        })
-                        .to(match email_addr.parse() {
-                            Ok(t) => t,
-                            Err(_) => {
-                                let _ = db.record_sent_email_history(&email_addr, &person.company_name, "INVALID");
-                                return;
-                            }
-                        })
-                        .subject(&subject)
-                        .body(body) {
-                            Ok(m) => m,
-                            Err(_) => return,
+                    async move {
+                        let email_addr = match person.public_email.clone() {
+                            Some(e) if !e.trim().is_empty() => e.trim().to_string(),
+                            _ => return,
                         };
 
-                    let send_res = mailer.send(email.clone()).await;
-                    let mut success = send_res.is_ok();
+                        if db.is_email_already_sent(&email_addr).unwrap_or(false) {
+                            return;
+                        }
 
-                    if !success {
-                        if fallback_mailer.send(email).await.is_ok() {
-                            success = true;
+                        if !ContactValidator::validate_email_syntax(&email_addr) {
+                            let _ = db.record_sent_email_history(&email_addr, &person.company_name, "INVALID");
+                            return;
+                        }
+
+                        if let Some(domain_part) = email_addr.split('@').nth(1) {
+                            if !validator.verify_mx_record(domain_part).await {
+                                let _ = db.record_sent_email_history(&email_addr, &person.company_name, "BOUNCED");
+                                return;
+                            }
+                        }
+
+                        let (subject, body) = Self::personalize_template(
+                            &default_subject,
+                            &default_body,
+                            &person.name,
+                            &person.company_name,
+                            &person.title,
+                        );
+
+                        let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
+
+                        let email = match Message::builder()
+                            .from(match from_header.parse() {
+                                Ok(f) => f,
+                                Err(_) => match config.sender_email.parse() {
+                                    Ok(f) => f,
+                                    Err(_) => return,
+                                },
+                            })
+                            .reply_to(match "support@agbtechnologies.com".parse() {
+                                Ok(r) => r,
+                                Err(_) => match config.sender_email.parse() {
+                                    Ok(r) => r,
+                                    Err(_) => return,
+                                },
+                            })
+                            .to(match email_addr.parse() {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    let _ = db.record_sent_email_history(&email_addr, &person.company_name, "INVALID");
+                                    return;
+                                }
+                            })
+                            .subject(&subject)
+                            .body(body) {
+                                Ok(m) => m,
+                                Err(_) => return,
+                            };
+
+                        let send_res = mailer.send(email.clone()).await;
+                        let mut success = send_res.is_ok();
+
+                        if !success {
+                            if fallback_mailer.send(email).await.is_ok() {
+                                success = true;
+                            }
+                        }
+
+                        if success {
+                            sent_count.fetch_add(1, Ordering::SeqCst);
+                            let history_id = db.record_sent_email_history(&email_addr, &person.company_name, "SENT").unwrap_or(0);
+                            let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {}) [ID: {}]", email_addr, person.name, person.title, history_id));
+                        } else {
+                            let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                            let _ = db.record_sent_email_history(&email_addr, &person.company_name, "FAILED");
+                            let _ = db.log_event("ERROR", &person.company_domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
                         }
                     }
+                })
+                .await;
 
-                    if success {
-                        sent_count.fetch_add(1, Ordering::SeqCst);
-                        let history_id = db.record_sent_email_history(&email_addr, &person.company_name, "SENT").unwrap_or(0);
-                        let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {}) [ID: {}]", email_addr, person.name, person.title, history_id));
-                    } else {
-                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
-                        let _ = db.record_sent_email_history(&email_addr, &person.company_name, "FAILED");
-                        let _ = db.log_event("ERROR", &person.company_domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
-                    }
-
-                    sleep(Duration::from_millis(150)).await;
-                }
-            })
-            .await;
+            // Safe Mailbox Rate Limit Guard: 5 emails per 10 seconds (30 emails/min)
+            sleep(Duration::from_secs(10)).await;
+        }
 
         Ok(sent_count.load(Ordering::SeqCst))
     }
@@ -360,102 +363,105 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                 .build()
         );
 
-        stream::iter(unsent_investors)
-            .for_each_concurrent(5, |inv| {
-                let mailer = mailer.clone();
-                let fallback_mailer = fallback_mailer.clone();
-                let validator = validator.clone();
-                let db = db_arc.clone();
-                let config = config_arc.clone();
-                let sent_count = sent_count.clone();
-                let default_subject = default_subject.clone();
-                let default_body = default_body.clone();
+        for chunk in unsent_investors.chunks(5) {
+            stream::iter(chunk.to_vec())
+                .for_each_concurrent(5, |inv| {
+                    let mailer = mailer.clone();
+                    let fallback_mailer = fallback_mailer.clone();
+                    let validator = validator.clone();
+                    let db = db_arc.clone();
+                    let config = config_arc.clone();
+                    let sent_count = sent_count.clone();
+                    let default_subject = default_subject.clone();
+                    let default_body = default_body.clone();
 
-                async move {
-                    let email_addr = match inv.public_email.clone() {
-                        Some(e) if !e.trim().is_empty() => e.trim().to_string(),
-                        _ => return,
-                    };
-
-                    if db.is_email_already_sent(&email_addr).unwrap_or(false) {
-                        return;
-                    }
-
-                    if !ContactValidator::validate_email_syntax(&email_addr) {
-                        let _ = db.record_sent_email_history(&email_addr, &inv.name, "INVALID");
-                        return;
-                    }
-
-                    if let Some(domain_part) = email_addr.split('@').nth(1) {
-                        if !validator.verify_mx_record(domain_part).await {
-                            let _ = db.record_sent_email_history(&email_addr, &inv.name, "BOUNCED");
-                            return;
-                        }
-                    }
-
-                    let focus_summary = if inv.focus.is_empty() { "B2B SaaS & AI".to_string() } else { inv.focus.join(", ") };
-
-                    let (subject, body) = Self::personalize_template(
-                        &default_subject,
-                        &default_body,
-                        &inv.name,
-                        &inv.name,
-                        &focus_summary,
-                    );
-
-                    let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
-
-                    let email = match Message::builder()
-                        .from(match from_header.parse() {
-                            Ok(f) => f,
-                            Err(_) => match config.sender_email.parse() {
-                                Ok(f) => f,
-                                Err(_) => return,
-                            },
-                        })
-                        .reply_to(match "support@agbtechnologies.com".parse() {
-                            Ok(r) => r,
-                            Err(_) => match config.sender_email.parse() {
-                                Ok(r) => r,
-                                Err(_) => return,
-                            },
-                        })
-                        .to(match email_addr.parse() {
-                            Ok(t) => t,
-                            Err(_) => {
-                                let _ = db.record_sent_email_history(&email_addr, &inv.name, "INVALID");
-                                return;
-                            }
-                        })
-                        .subject(&subject)
-                        .body(body) {
-                            Ok(m) => m,
-                            Err(_) => return,
+                    async move {
+                        let email_addr = match inv.public_email.clone() {
+                            Some(e) if !e.trim().is_empty() => e.trim().to_string(),
+                            _ => return,
                         };
 
-                    let send_res = mailer.send(email.clone()).await;
-                    let mut success = send_res.is_ok();
+                        if db.is_email_already_sent(&email_addr).unwrap_or(false) {
+                            return;
+                        }
 
-                    if !success {
-                        if fallback_mailer.send(email).await.is_ok() {
-                            success = true;
+                        if !ContactValidator::validate_email_syntax(&email_addr) {
+                            let _ = db.record_sent_email_history(&email_addr, &inv.name, "INVALID");
+                            return;
+                        }
+
+                        if let Some(domain_part) = email_addr.split('@').nth(1) {
+                            if !validator.verify_mx_record(domain_part).await {
+                                let _ = db.record_sent_email_history(&email_addr, &inv.name, "BOUNCED");
+                                return;
+                            }
+                        }
+
+                        let focus_summary = if inv.focus.is_empty() { "B2B SaaS & AI".to_string() } else { inv.focus.join(", ") };
+
+                        let (subject, body) = Self::personalize_template(
+                            &default_subject,
+                            &default_body,
+                            &inv.name,
+                            &inv.name,
+                            &focus_summary,
+                        );
+
+                        let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
+
+                        let email = match Message::builder()
+                            .from(match from_header.parse() {
+                                Ok(f) => f,
+                                Err(_) => match config.sender_email.parse() {
+                                    Ok(f) => f,
+                                    Err(_) => return,
+                                },
+                            })
+                            .reply_to(match "support@agbtechnologies.com".parse() {
+                                Ok(r) => r,
+                                Err(_) => match config.sender_email.parse() {
+                                    Ok(r) => r,
+                                    Err(_) => return,
+                                },
+                            })
+                            .to(match email_addr.parse() {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    let _ = db.record_sent_email_history(&email_addr, &inv.name, "INVALID");
+                                    return;
+                                }
+                            })
+                            .subject(&subject)
+                            .body(body) {
+                                Ok(m) => m,
+                                Err(_) => return,
+                            };
+
+                        let send_res = mailer.send(email.clone()).await;
+                        let mut success = send_res.is_ok();
+
+                        if !success {
+                            if fallback_mailer.send(email).await.is_ok() {
+                                success = true;
+                            }
+                        }
+
+                        if success {
+                            sent_count.fetch_add(1, Ordering::SeqCst);
+                            let history_id = db.record_sent_email_history(&email_addr, &inv.name, "SENT").unwrap_or(0);
+                            let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {}) [ID: {}]", email_addr, inv.name, inv.investor_type, history_id));
+                        } else {
+                            let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                            let _ = db.record_sent_email_history(&email_addr, &inv.name, "FAILED");
+                            let _ = db.log_event("ERROR", &inv.website, &format!("SMTP error to {}: {}", email_addr, err_msg));
                         }
                     }
+                })
+                .await;
 
-                    if success {
-                        sent_count.fetch_add(1, Ordering::SeqCst);
-                        let history_id = db.record_sent_email_history(&email_addr, &inv.name, "SENT").unwrap_or(0);
-                        let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {}) [ID: {}]", email_addr, inv.name, inv.investor_type, history_id));
-                    } else {
-                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
-                        let _ = db.record_sent_email_history(&email_addr, &inv.name, "FAILED");
-                        let _ = db.log_event("ERROR", &inv.website, &format!("SMTP error to {}: {}", email_addr, err_msg));
-                    }
-
-                    sleep(Duration::from_millis(150)).await;
-                }
-            })
-            .await;
+            // Safe Mailbox Rate Limit Guard: 5 emails per 10 seconds
+            sleep(Duration::from_secs(10)).await;
+        }
 
         Ok(sent_count.load(Ordering::SeqCst))
     }
@@ -493,96 +499,99 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                 .build()
         );
 
-        stream::iter(unsent_leads)
-            .for_each_concurrent(5, |company| {
-                let mailer = mailer.clone();
-                let fallback_mailer = fallback_mailer.clone();
-                let validator = validator.clone();
-                let db = db_arc.clone();
-                let config = config_arc.clone();
-                let sent_count = sent_count.clone();
-                let default_subject = default_subject.clone();
-                let default_body = default_body.clone();
+        for chunk in unsent_leads.chunks(5) {
+            stream::iter(chunk.to_vec())
+                .for_each_concurrent(5, |company| {
+                    let mailer = mailer.clone();
+                    let fallback_mailer = fallback_mailer.clone();
+                    let validator = validator.clone();
+                    let db = db_arc.clone();
+                    let config = config_arc.clone();
+                    let sent_count = sent_count.clone();
+                    let default_subject = default_subject.clone();
+                    let default_body = default_body.clone();
 
-                async move {
-                    let email_addr = match company.email.clone() {
-                        Some(e) if !e.trim().is_empty() => e.trim().to_string(),
-                        _ => return,
-                    };
-
-                    if db.is_email_already_sent(&email_addr).unwrap_or(false) {
-                        return;
-                    }
-
-                    if !ContactValidator::validate_email_syntax(&email_addr) {
-                        let _ = db.record_sent_email_history(&email_addr, &company.name, "INVALID");
-                        return;
-                    }
-
-                    if let Some(domain_part) = email_addr.split('@').nth(1) {
-                        if !validator.verify_mx_record(domain_part).await {
-                            let _ = db.record_sent_email_history(&email_addr, &company.name, "BOUNCED");
-                            return;
-                        }
-                    }
-
-                    let person_name = company.contact_person.clone().unwrap_or_else(|| "Technology Executive".to_string());
-                    let title = company.contact_position.clone().unwrap_or_else(|| "CTO / VP Engineering".to_string());
-
-                    let (subject, body) = Self::personalize_template(
-                        &default_subject,
-                        &default_body,
-                        &person_name,
-                        &company.name,
-                        &title,
-                    );
-
-                    let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
-
-                    let email = match Message::builder()
-                        .from(match from_header.parse() {
-                            Ok(f) => f,
-                            Err(_) => match config.sender_email.parse() {
-                                Ok(f) => f,
-                                Err(_) => return,
-                            },
-                        })
-                        .to(match email_addr.parse() {
-                            Ok(t) => t,
-                            Err(_) => {
-                                let _ = db.record_sent_email_history(&email_addr, &company.name, "INVALID");
-                                return;
-                            }
-                        })
-                        .subject(&subject)
-                        .body(body) {
-                            Ok(m) => m,
-                            Err(_) => return,
+                    async move {
+                        let email_addr = match company.email.clone() {
+                            Some(e) if !e.trim().is_empty() => e.trim().to_string(),
+                            _ => return,
                         };
 
-                    let send_res = mailer.send(email.clone()).await;
-                    let mut success = send_res.is_ok();
+                        if db.is_email_already_sent(&email_addr).unwrap_or(false) {
+                            return;
+                        }
 
-                    if !success {
-                        if fallback_mailer.send(email).await.is_ok() {
-                            success = true;
+                        if !ContactValidator::validate_email_syntax(&email_addr) {
+                            let _ = db.record_sent_email_history(&email_addr, &company.name, "INVALID");
+                            return;
+                        }
+
+                        if let Some(domain_part) = email_addr.split('@').nth(1) {
+                            if !validator.verify_mx_record(domain_part).await {
+                                let _ = db.record_sent_email_history(&email_addr, &company.name, "BOUNCED");
+                                return;
+                            }
+                        }
+
+                        let person_name = company.contact_person.clone().unwrap_or_else(|| "Technology Executive".to_string());
+                        let title = company.contact_position.clone().unwrap_or_else(|| "CTO / VP Engineering".to_string());
+
+                        let (subject, body) = Self::personalize_template(
+                            &default_subject,
+                            &default_body,
+                            &person_name,
+                            &company.name,
+                            &title,
+                        );
+
+                        let from_header = format!("{} <{}>", config.sender_name, config.sender_email);
+
+                        let email = match Message::builder()
+                            .from(match from_header.parse() {
+                                Ok(f) => f,
+                                Err(_) => match config.sender_email.parse() {
+                                    Ok(f) => f,
+                                    Err(_) => return,
+                                },
+                            })
+                            .to(match email_addr.parse() {
+                                Ok(t) => t,
+                                Err(_) => {
+                                    let _ = db.record_sent_email_history(&email_addr, &company.name, "INVALID");
+                                    return;
+                                }
+                            })
+                            .subject(&subject)
+                            .body(body) {
+                                Ok(m) => m,
+                                Err(_) => return,
+                            };
+
+                        let send_res = mailer.send(email.clone()).await;
+                        let mut success = send_res.is_ok();
+
+                        if !success {
+                            if fallback_mailer.send(email).await.is_ok() {
+                                success = true;
+                            }
+                        }
+
+                        if success {
+                            sent_count.fetch_add(1, Ordering::SeqCst);
+                            let history_id = db.record_sent_email_history(&email_addr, &company.name, "SENT").unwrap_or(0);
+                            let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {} [ID: {}]", email_addr, history_id));
+                        } else {
+                            let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                            let _ = db.record_sent_email_history(&email_addr, &company.domain, "FAILED");
+                            let _ = db.log_event("ERROR", &company.domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
                         }
                     }
+                })
+                .await;
 
-                    if success {
-                        sent_count.fetch_add(1, Ordering::SeqCst);
-                        let history_id = db.record_sent_email_history(&email_addr, &company.name, "SENT").unwrap_or(0);
-                        let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {} [ID: {}]", email_addr, history_id));
-                    } else {
-                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
-                        let _ = db.record_sent_email_history(&email_addr, &company.domain, "FAILED");
-                        let _ = db.log_event("ERROR", &company.domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
-                    }
-
-                    sleep(Duration::from_millis(150)).await;
-                }
-            })
-            .await;
+            // Safe Mailbox Rate Limit Guard: 5 emails per 10 seconds
+            sleep(Duration::from_secs(10)).await;
+        }
 
         Ok(sent_count.load(Ordering::SeqCst))
     }
