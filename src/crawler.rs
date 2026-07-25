@@ -118,7 +118,7 @@ impl AntiBlockingCrawler {
                 match self.db.pop_pending_queue_domains(10) {
                     Ok(queued) if !queued.is_empty() => {
                         let _ = self.db.log_event("INFO", "DAEMON", &format!("Popped batch of {} unique pending domains for stealth crawling.", queued.len()));
-                        self.start_crawl(queued, Some("stealth".to_string())).await;
+                        self.execute_crawl_batch(queued, Some("stealth".to_string()), false).await;
                     }
                     _ => {
                         // 2. Fallback: Filter seed list for any un-crawled seeds
@@ -136,11 +136,11 @@ impl AntiBlockingCrawler {
                         if !uncrawled_seeds.is_empty() {
                             let batch_seeds: Vec<String> = uncrawled_seeds.into_iter().take(10).collect();
                             let _ = self.db.log_event("INFO", "DAEMON", &format!("Launching batch of {} uncrawled seed targets.", batch_seeds.len()));
-                            self.start_crawl(batch_seeds, Some("stealth".to_string())).await;
+                            self.execute_crawl_batch(batch_seeds, Some("stealth".to_string()), false).await;
                         } else {
-                            // Cycle default seeds to refresh intelligence in 10-domain batches
+                            // Cycle default seeds to refresh intelligence in 10-domain batches (force re-crawl)
                             let batch_seeds: Vec<String> = default_seeds.iter().take(10).cloned().collect();
-                            self.start_crawl(batch_seeds, Some("stealth".to_string())).await;
+                            self.execute_crawl_batch(batch_seeds, Some("stealth".to_string()), true).await;
                         }
                     }
                 }
@@ -150,7 +150,11 @@ impl AntiBlockingCrawler {
     }
 
     pub async fn start_crawl(&self, seed_urls: Vec<String>, mode: Option<String>) {
+        self.is_running.store(true, Ordering::SeqCst);
+        self.execute_crawl_batch(seed_urls, mode, true).await;
+    }
 
+    async fn execute_crawl_batch(&self, seed_urls: Vec<String>, mode: Option<String>, force_recrawl: bool) {
         let concurrency = if let Some(ref m) = mode {
             let mut s = self.settings.write().await;
             s.mode = m.clone();
@@ -178,7 +182,6 @@ impl AntiBlockingCrawler {
             3
         };
 
-        self.is_running.store(true, Ordering::SeqCst);
         let db = self.db.clone();
         let proxy_mgr = self.proxy_mgr.clone();
         let validator = self.validator.clone();
@@ -213,7 +216,7 @@ impl AntiBlockingCrawler {
 
                         {
                             let mut visited = visited_in_session.lock().await;
-                            if visited.contains(&domain) || db.is_domain_crawled(&domain).unwrap_or(false) {
+                            if visited.contains(&domain) || (!force_recrawl && db.is_domain_crawled(&domain).unwrap_or(false)) {
                                 return;
                             }
                             visited.insert(domain.clone());
@@ -226,6 +229,7 @@ impl AntiBlockingCrawler {
 
                         let mut client_builder = Client::builder()
                             .timeout(Duration::from_secs(12))
+                            .danger_accept_invalid_certs(true)
                             .default_headers(proxy_mgr.build_stealth_headers());
 
                         if let Some(proxy_url) = proxy_mgr.get_next_proxy().await {
@@ -241,6 +245,13 @@ impl AntiBlockingCrawler {
                                 return;
                             }
                         };
+
+                        let direct_client = Client::builder()
+                            .timeout(Duration::from_secs(10))
+                            .danger_accept_invalid_certs(true)
+                            .default_headers(proxy_mgr.build_stealth_headers())
+                            .build()
+                            .ok();
 
                         let mut all_emails = HashSet::new();
                         let mut contact_subpage = None;
@@ -264,41 +275,72 @@ impl AntiBlockingCrawler {
                                 format!("https://{}{}", domain, subpath)
                             };
 
-                            match client.get(&crawl_target).send().await {
-                                Ok(resp) => {
-                                    if resp.status().is_success() {
-                                        if let Ok(html) = resp.text().await {
-                                            pages_crawled += 1;
-                                            let parsed = parse_html(&crawl_target, &html);
+                            let mut html_opt = None;
 
-                                            for e in parsed.emails { all_emails.insert(e); }
-                                            if parsed.linkedin_url.is_some() && linkedin_url.is_none() { linkedin_url = parsed.linkedin_url; }
-                                            if parsed.contact_url.is_some() && contact_subpage.is_none() { contact_subpage = parsed.contact_url; }
-                                            
-                                            hiring_signals.extend(parsed.hiring_signals);
-                                            engineering_jobs += parsed.engineering_jobs;
-                                            remote_jobs += parsed.remote_jobs;
-                                            outsourcing_keywords += parsed.outsourcing_keywords;
-                                            for t in parsed.tech_stack { if !tech_stack.contains(&t) { tech_stack.push(t); } }
+                            // 1. Try with proxy/stealth client
+                            if let Ok(resp) = client.get(&crawl_target).send().await {
+                                if resp.status().is_success() {
+                                    if let Ok(html) = resp.text().await {
+                                        html_opt = Some(html);
+                                    }
+                                }
+                            }
 
-                                            let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
-                                            for p in &people {
-                                                let _ = db.save_person(p);
-                                            }
-                                            extracted_people.extend(people);
-
-                                            // Auto-enqueue external corporate links to expand 24/7 discovery pipeline
-                                            for ext_link in parsed.external_links {
-                                                if let Some(ext_domain) = extract_domain(&ext_link) {
-                                                    if !ext_domain.contains("facebook.com") && !ext_domain.contains("twitter.com") && !ext_domain.contains("youtube.com") && !ext_domain.contains("instagram.com") && !ext_domain.contains("google.com") && !ext_domain.contains("linkedin.com") && !ext_domain.contains("github.com") && ext_domain != domain {
-                                                        let _ = db.enqueue_domain(&ext_domain, &ext_link);
-                                                    }
-                                                }
+                            // 2. Fallback to direct client if proxy failed
+                            if html_opt.is_none() {
+                                if let Some(ref dc) = direct_client {
+                                    if let Ok(resp) = dc.get(&crawl_target).send().await {
+                                        if resp.status().is_success() {
+                                            if let Ok(html) = resp.text().await {
+                                                html_opt = Some(html);
                                             }
                                         }
                                     }
                                 }
-                                Err(_) => {}
+                            }
+
+                            // 3. Fallback to http:// if https:// failed
+                            if html_opt.is_none() {
+                                let http_target = crawl_target.replace("https://", "http://");
+                                if let Some(ref dc) = direct_client {
+                                    if let Ok(resp) = dc.get(&http_target).send().await {
+                                        if resp.status().is_success() {
+                                            if let Ok(html) = resp.text().await {
+                                                html_opt = Some(html);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if let Some(html) = html_opt {
+                                pages_crawled += 1;
+                                let parsed = parse_html(&crawl_target, &html);
+
+                                for e in parsed.emails { all_emails.insert(e); }
+                                if parsed.linkedin_url.is_some() && linkedin_url.is_none() { linkedin_url = parsed.linkedin_url; }
+                                if parsed.contact_url.is_some() && contact_subpage.is_none() { contact_subpage = parsed.contact_url; }
+                                
+                                hiring_signals.extend(parsed.hiring_signals);
+                                engineering_jobs += parsed.engineering_jobs;
+                                remote_jobs += parsed.remote_jobs;
+                                outsourcing_keywords += parsed.outsourcing_keywords;
+                                for t in parsed.tech_stack { if !tech_stack.contains(&t) { tech_stack.push(t); } }
+
+                                let people = DecisionMakerEngine::extract_people_from_html(&html, &domain, &domain);
+                                for p in &people {
+                                    let _ = db.save_person(p);
+                                }
+                                extracted_people.extend(people);
+
+                                // Auto-enqueue external corporate links to expand 24/7 discovery pipeline
+                                for ext_link in parsed.external_links {
+                                    if let Some(ext_domain) = extract_domain(&ext_link) {
+                                        if !ext_domain.contains("facebook.com") && !ext_domain.contains("twitter.com") && !ext_domain.contains("youtube.com") && !ext_domain.contains("instagram.com") && !ext_domain.contains("google.com") && !ext_domain.contains("linkedin.com") && !ext_domain.contains("github.com") && ext_domain != domain {
+                                            let _ = db.enqueue_domain(&ext_domain, &ext_link);
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -414,8 +456,7 @@ impl AntiBlockingCrawler {
                 let mut cd = current_domain_store.write().await;
                 *cd = None;
             }
-            is_running.store(false, Ordering::SeqCst);
-            let _ = db.log_event("INFO", "CRAWLER", "Crawl session complete. Continuous daemon standby.");
+            let _ = db.log_event("INFO", "CRAWLER", "Crawl batch complete. Continuous daemon active.");
         });
     }
 }
@@ -427,3 +468,4 @@ fn uppercase_first_letter(s: &str) -> String {
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
+

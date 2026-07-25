@@ -4,7 +4,7 @@ export function initRoutes(onTabChange) {
     const pageHeading = document.getElementById('pageHeading');
 
     const headings = {
-        tabDashboard: 'Target Companies & Lead Intelligence',
+        tabDashboard: 'Executive Lead Intelligence Dashboard',
         tabPipeline: 'Multi-Stage Leads Qualification Pipeline',
         tabPeople: 'Verified Decision Makers & Executive Contacts',
         tabInvestors: 'Verified B2B SaaS & AI Investors',
@@ -29,7 +29,7 @@ export function initRoutes(onTabChange) {
     };
 
     const tabToPathMap = {
-        tabDashboard: '/leads',
+        tabDashboard: '/',
         tabPipeline: '/pipeline',
         tabInvestors: '/investors',
         tabPeople: '/people',

@@ -2,7 +2,7 @@ use crate::db::Database;
 use regex::Regex;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn};
+use tracing::info;
 
 pub struct BounceMonitorEngine;
 
