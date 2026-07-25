@@ -85,11 +85,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         axum::http::HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     );
 
-    let static_service = ServeDir::new("static")
-        .fallback(ServeFile::new("static/index.html"));
-
     let app = create_router(app_state)
-        .fallback_service(static_service)
+        .fallback(static_file_handler)
         .layer(cors)
         .layer(compression_layer)
         .layer(cache_layer);
@@ -106,4 +103,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+async fn static_file_handler(axum::extract::OriginalUri(uri): axum::extract::OriginalUri) -> Response {
+    use axum::response::IntoResponse;
+    let raw_path = uri.path().trim_start_matches('/');
+    let clean_path = if raw_path.is_empty() || raw_path == "index.html" {
+        "static/index.html".to_string()
+    } else {
+        format!("static/{}", raw_path)
+    };
+
+    let path = std::path::Path::new(&clean_path);
+    let (mime_type, file_to_read) = if path.exists() && path.is_file() {
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        let mime = match ext {
+            "js" => "application/javascript; charset=utf-8",
+            "css" => "text/css; charset=utf-8",
+            "html" => "text/html; charset=utf-8",
+            "json" => "application/json",
+            "png" => "image/png",
+            "jpg" | "jpeg" => "image/jpeg",
+            "svg" => "image/svg+xml",
+            "ico" => "image/x-icon",
+            "woff2" => "font/woff2",
+            _ => "text/plain",
+        };
+        (mime, clean_path)
+    } else {
+        ("text/html; charset=utf-8", "static/index.html".to_string())
+    };
+
+    match tokio::fs::read(&file_to_read).await {
+        Ok(contents) => (
+            StatusCode::OK,
+            [
+                (axum::http::header::CONTENT_TYPE, mime_type),
+                (axum::http::header::CACHE_CONTROL, "no-cache, no-store, must-revalidate"),
+            ],
+            contents,
+        ).into_response(),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            [(axum::http::header::CONTENT_TYPE, "text/plain")],
+            "404 Not Found",
+        ).into_response(),
+    }
 }
