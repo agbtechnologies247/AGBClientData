@@ -1,13 +1,13 @@
-import { API_ENDPOINTS } from './js/config.js?v=2.5.0';
-import { initRoutes } from './js/routes.js?v=2.5.0';
-import { loadStats, loadLeads } from './js/modules/dashboard.js?v=2.5.0';
-import { loadPipeline } from './js/modules/pipeline.js?v=2.5.0';
-import { loadPeople } from './js/modules/people.js?v=2.5.0';
-import { loadInvestors, initInvestorHandlers } from './js/modules/investors.js?v=2.5.0';
-import { loadOutreachHistory } from './js/modules/outreach.js?v=2.5.0';
-import { initCrawlerHandlers } from './js/modules/crawler.js?v=2.5.0';
-import { loadProxies } from './js/modules/proxies.js?v=2.5.0';
-import { loadLogs, initLogsHandlers } from './js/modules/logs.js?v=2.5.0';
+import { API_ENDPOINTS } from './js/config.js';
+import { initRoutes } from './js/routes.js';
+import { loadStats, loadLeads } from './js/modules/dashboard.js';
+import { loadPipeline } from './js/modules/pipeline.js';
+import { loadPeople } from './js/modules/people.js';
+import { loadInvestors, initInvestorHandlers } from './js/modules/investors.js';
+import { loadOutreachHistory } from './js/modules/outreach.js';
+import { initCrawlerHandlers } from './js/modules/crawler.js';
+import { loadProxies } from './js/modules/proxies.js';
+import { loadLogs, initLogsHandlers } from './js/modules/logs.js';
 
 // Global Toast Helper
 window.showToast = function(msg) {
