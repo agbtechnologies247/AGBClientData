@@ -189,6 +189,8 @@ impl Database {
         let _ = conn.execute("ALTER TABLE companies ADD COLUMN contact_person TEXT", []);
         let _ = conn.execute("ALTER TABLE companies ADD COLUMN contact_position TEXT", []);
         let _ = conn.execute("ALTER TABLE companies ADD COLUMN qualification_stage TEXT NOT NULL DEFAULT 'DISCOVERED'", []);
+        let _ = conn.execute("UPDATE crawl_queue SET status = 'PENDING' WHERE status = 'PROCESSING'", []);
+        let _ = conn.execute("DELETE FROM sent_emails_history WHERE status = 'FAILED'", []);
 
         Ok(())
     }
@@ -922,7 +924,7 @@ impl Database {
     pub fn is_email_already_sent(&self, email: &str) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
         let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM sent_emails_history WHERE recipient_email = ?1",
+            "SELECT COUNT(*) FROM sent_emails_history WHERE recipient_email = ?1 AND status IN ('SENT', 'DELIVERED', 'INVALID', 'BOUNCED')",
             params![email.trim()],
             |r| r.get(0),
         ).unwrap_or(0);
@@ -965,7 +967,7 @@ impl Database {
             "SELECT id, name, domain, website, country, city, industry, email, contact_url, linkedin_url, hiring, engineering_jobs, remote_jobs, outsourcing_keywords, lead_score, priority_tier, tech_stack, contact_person, contact_position, qualification_stage, last_crawled
              FROM companies
              WHERE email IS NOT NULL AND email != ''
-             AND email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             AND email NOT IN (SELECT recipient_email FROM sent_emails_history WHERE status IN ('SENT', 'DELIVERED', 'INVALID', 'BOUNCED'))
              ORDER BY lead_score DESC, id DESC
              LIMIT ?"
         )?;
@@ -1013,7 +1015,7 @@ impl Database {
             "SELECT id, company_id, company_name, company_domain, name, title, normalized_role, decision_maker_score, public_email, linkedin_url, confidence_score
              FROM people
              WHERE public_email IS NOT NULL AND public_email != ''
-             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history WHERE status IN ('SENT', 'DELIVERED', 'INVALID', 'BOUNCED'))
              ORDER BY decision_maker_score DESC, id DESC
              LIMIT ?"
         )?;
@@ -1047,7 +1049,7 @@ impl Database {
             "SELECT id, name, investor_type, website, country, city, focus, stages, check_size, public_email, linkedin_url, portfolio_highlights, recent_investments, score, priority_tier, last_updated
              FROM investors
              WHERE public_email IS NOT NULL AND public_email != ''
-             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history)
+             AND public_email NOT IN (SELECT recipient_email FROM sent_emails_history WHERE status IN ('SENT', 'DELIVERED', 'INVALID', 'BOUNCED'))
              ORDER BY score DESC, id DESC
              LIMIT ?"
         )?;
