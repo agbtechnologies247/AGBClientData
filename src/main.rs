@@ -13,6 +13,7 @@ mod score;
 #[cfg(test)]
 mod tests;
 mod validator;
+mod search_utility;
 
 use api::{create_router, AppState};
 use bounce_monitor::BounceMonitorEngine;

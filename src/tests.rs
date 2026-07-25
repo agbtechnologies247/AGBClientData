@@ -292,4 +292,37 @@ mod tests {
         assert!(parsed.tech_stack.contains(&"Stripe".to_string()));
         assert!(parsed.tech_stack.contains(&"Google Analytics".to_string()));
     }
+
+    #[test]
+    fn test_search_utility_parsing() {
+        use crate::search_utility::{ApiResponse, LiveSearchEngine, SearchResult};
+
+        let engine = LiveSearchEngine::new();
+        let html_content = r#"
+            <html>
+                <body>
+                    <p>First paragraph detailing US B2B IT software engineering services.</p>
+                    <p>Second paragraph outlining CTO VP engineering hiring trends.</p>
+                </body>
+            </html>
+        "#;
+
+        let paragraphs = engine.parse_article_content(html_content);
+        assert_eq!(paragraphs.len(), 2);
+        assert!(paragraphs[0].contains("First paragraph detailing US B2B IT"));
+        assert!(paragraphs[1].contains("Second paragraph outlining CTO"));
+
+        let mock_result = SearchResult {
+            title: "Top B2B SaaS Companies 2026".to_string(),
+            link: "https://b2bsaasleaders.com".to_string(),
+            snippet: "Directory of leading B2B SaaS companies hiring remote engineering teams.".to_string(),
+        };
+
+        let api_resp = ApiResponse {
+            results: vec![mock_result],
+        };
+
+        assert_eq!(api_resp.results.len(), 1);
+        assert_eq!(api_resp.results[0].title, "Top B2B SaaS Companies 2026");
+    }
 }

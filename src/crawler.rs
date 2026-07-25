@@ -113,6 +113,16 @@ impl AntiBlockingCrawler {
             "https://figma.com".to_string(),
         ];
 
+        let live_search = crate::search_utility::LiveSearchEngine::new();
+        let search_query_matrix = vec![
+            "US B2B IT companies hiring CTO",
+            "UK SaaS software engineering firms",
+            "top software development agencies Austin London Chicago",
+            "AI automation venture capital investors",
+            "managed IT services companies contact email",
+            "enterprise cloud consultancy companies US UK",
+        ];
+
         loop {
             if self.is_running() {
                 // 1. Pop un-crawled pending domains from SQLite queue in batches of 10
@@ -139,7 +149,19 @@ impl AntiBlockingCrawler {
                             let _ = self.db.log_event("INFO", "DAEMON", &format!("Launching batch of {} uncrawled seed targets.", batch_seeds.len()));
                             self.execute_crawl_batch(batch_seeds, Some("stealth".to_string()), false).await;
                         } else {
-                            // Enqueue all seeds to expand crawl queue dynamically
+                            // Execute Live Web Search Utility to fetch fresh real-time web results
+                            let target_query = search_query_matrix[rand::random::<usize>() % search_query_matrix.len()];
+                            let _ = self.db.log_event("INFO", "LIVE_SEARCH", &format!("Executing live web search query: '{}'", target_query));
+
+                            if let Ok(search_api_resp) = live_search.fetch_web_data(target_query, None).await {
+                                for item in search_api_resp.results {
+                                    if let Some(d) = extract_domain(&item.link) {
+                                        let _ = self.db.enqueue_domain(&d, &item.link);
+                                    }
+                                }
+                            }
+
+                            // Enqueue default seeds to expand crawl queue dynamically
                             for s in &default_seeds {
                                 if let Some(d) = extract_domain(s) {
                                     let _ = self.db.enqueue_domain(&d, s);
