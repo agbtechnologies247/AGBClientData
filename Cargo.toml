@@ -9,7 +9,7 @@ description = "Anti-blocking Rust Server & Marketing Data Intelligence SPA"
 axum = { version = "0.7", features = ["macros"] }
 tokio = { version = "1.38", features = ["full"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace", "compression-full", "set-header"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 reqwest = { version = "0.12", features = ["json", "cookies", "socks"] }

@@ -77,12 +77,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allow_methods(Any)
         .allow_headers(Any);
 
+    let compression_layer = tower_http::compression::CompressionLayer::new();
+    let cache_layer = tower_http::set_header::SetResponseHeaderLayer::if_not_present(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("public, max-age=86400, must-revalidate"),
+    );
+
     let static_service = ServeDir::new("static")
         .fallback(ServeFile::new("static/index.html"));
 
     let app = create_router(app_state)
         .fallback_service(static_service)
-        .layer(cors);
+        .layer(cors)
+        .layer(compression_layer)
+        .layer(cache_layer);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "8080".into())
