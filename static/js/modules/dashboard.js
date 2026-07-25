@@ -8,6 +8,7 @@ export async function loadStats() {
     try {
         const res = await fetch(API_ENDPOINTS.STATS);
         const data = await res.json();
+        console.log("[LeadPulse Live Stats]", data);
 
         const setTxt = (id, val) => {
             const el = document.getElementById(id);

@@ -191,6 +191,8 @@ impl Database {
         let _ = conn.execute("ALTER TABLE companies ADD COLUMN qualification_stage TEXT NOT NULL DEFAULT 'DISCOVERED'", []);
         let _ = conn.execute("UPDATE crawl_queue SET status = 'PENDING' WHERE status = 'PROCESSING'", []);
         let _ = conn.execute("DELETE FROM sent_emails_history WHERE status = 'FAILED'", []);
+        let _ = conn.execute("DELETE FROM people WHERE id NOT IN (SELECT MIN(id) FROM people GROUP BY company_domain, name)", []);
+        let _ = conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_people_comp_name ON people(company_domain, name)", []);
 
         Ok(())
     }
@@ -673,7 +675,13 @@ impl Database {
         let conn = self.conn.lock().unwrap();
         conn.execute(
             "INSERT INTO people (company_id, company_name, company_domain, name, title, normalized_role, decision_maker_score, public_email, linkedin_url, confidence_score)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             ON CONFLICT(company_domain, name) DO UPDATE SET
+                title=excluded.title, normalized_role=excluded.normalized_role,
+                decision_maker_score=excluded.decision_maker_score,
+                public_email=COALESCE(excluded.public_email, people.public_email),
+                linkedin_url=COALESCE(excluded.linkedin_url, people.linkedin_url),
+                confidence_score=excluded.confidence_score",
             params![
                 p.company_id, p.company_name, p.company_domain, p.name, p.title, p.normalized_role,
                 p.decision_maker_score, p.public_email, p.linkedin_url, p.confidence_score
@@ -811,6 +819,23 @@ impl Database {
             "INSERT OR IGNORE INTO proxies (url, protocol, active) VALUES (?1, ?2, 1)",
             params![url, protocol],
         )?;
+        Ok(())
+    }
+
+    pub fn record_proxy_use(&self, proxy_url: &str, success: bool, latency_ms: u64) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        let now = Utc::now().to_rfc3339();
+        if success {
+            conn.execute(
+                "UPDATE proxies SET success_count = success_count + 1, latency_ms = ?1, last_used = ?2, active = 1 WHERE url = ?3",
+                params![latency_ms as i64, now, proxy_url],
+            )?;
+        } else {
+            conn.execute(
+                "UPDATE proxies SET fail_count = fail_count + 1, latency_ms = ?1, last_used = ?2 WHERE url = ?3",
+                params![latency_ms as i64, now, proxy_url],
+            )?;
+        }
         Ok(())
     }
 

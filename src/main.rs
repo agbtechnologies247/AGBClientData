@@ -78,9 +78,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .allow_headers(Any);
 
     let compression_layer = tower_http::compression::CompressionLayer::new();
-    let cache_layer = tower_http::set_header::SetResponseHeaderLayer::if_not_present(
+    let cache_layer = tower_http::set_header::SetResponseHeaderLayer::overriding(
         axum::http::header::CACHE_CONTROL,
-        axum::http::HeaderValue::from_static("public, max-age=86400, must-revalidate"),
+        axum::http::HeaderValue::from_static("no-cache, no-store, must-revalidate"),
     );
 
     let static_service = ServeDir::new("static")
