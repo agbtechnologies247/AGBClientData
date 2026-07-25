@@ -55,6 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         crawler_daemon.start_daemon_loop().await;
     });
 
+    proxy::ProxyManager::start_proxy_health_checker(proxy_mgr.clone(), db.clone());
+
     let bounce_db = db.clone();
     tokio::spawn(async move {
         BounceMonitorEngine::start_daemon_loop(bounce_db).await;

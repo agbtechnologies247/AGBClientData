@@ -280,22 +280,38 @@ impl AntiBlockingCrawler {
 
                         let mut html_opt = None;
 
-                        // 1. Primary: Direct high-speed HTTP fetch
-                        if let Some(ref dc) = direct_client {
-                            if let Ok(resp) = dc.get(&crawl_target).send().await {
-                                if resp.status().is_success() {
-                                    if let Ok(html) = resp.text().await {
-                                        html_opt = Some(html);
+                        // 1. Primary: Try active stealth proxy first to bypass VPS datacenter IP blocks
+                        if let Some(ref pc) = proxy_client {
+                            let start_t = std::time::Instant::now();
+                            match pc.get(&crawl_target).send().await {
+                                Ok(resp) => {
+                                    let latency = start_t.elapsed().as_millis() as u64;
+                                    if resp.status().is_success() {
+                                        if let Ok(html) = resp.text().await {
+                                            html_opt = Some(html);
+                                        }
+                                        if let Some(ref p_url) = active_proxy_url {
+                                            let _ = db.record_proxy_use(p_url, true, latency);
+                                        }
+                                    } else {
+                                        if let Some(ref p_url) = active_proxy_url {
+                                            let _ = db.record_proxy_use(p_url, false, latency);
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    let latency = start_t.elapsed().as_millis() as u64;
+                                    if let Some(ref p_url) = active_proxy_url {
+                                        let _ = db.record_proxy_use(p_url, false, latency);
                                     }
                                 }
                             }
                         }
 
-                        // 2. Secondary: Try http:// if https:// failed
+                        // 2. Secondary: Direct high-speed HTTP fetch fallback
                         if html_opt.is_none() {
-                            let http_target = crawl_target.replace("https://", "http://");
                             if let Some(ref dc) = direct_client {
-                                if let Ok(resp) = dc.get(&http_target).send().await {
+                                if let Ok(resp) = dc.get(&crawl_target).send().await {
                                     if resp.status().is_success() {
                                         if let Ok(html) = resp.text().await {
                                             html_opt = Some(html);
@@ -305,30 +321,14 @@ impl AntiBlockingCrawler {
                             }
                         }
 
-                        // 3. Proxy Fallback with Live Success / Failure Tracking
+                        // 3. Tertiary: Try http:// if https:// failed
                         if html_opt.is_none() {
-                            if let Some(ref pc) = proxy_client {
-                                let start_t = std::time::Instant::now();
-                                match pc.get(&crawl_target).send().await {
-                                    Ok(resp) => {
-                                        let latency = start_t.elapsed().as_millis() as u64;
-                                        if resp.status().is_success() {
-                                            if let Ok(html) = resp.text().await {
-                                                html_opt = Some(html);
-                                            }
-                                            if let Some(ref p_url) = active_proxy_url {
-                                                let _ = db.record_proxy_use(p_url, true, latency);
-                                            }
-                                        } else {
-                                            if let Some(ref p_url) = active_proxy_url {
-                                                let _ = db.record_proxy_use(p_url, false, latency);
-                                            }
-                                        }
-                                    }
-                                    Err(_) => {
-                                        let latency = start_t.elapsed().as_millis() as u64;
-                                        if let Some(ref p_url) = active_proxy_url {
-                                            let _ = db.record_proxy_use(p_url, false, latency);
+                            let http_target = crawl_target.replace("https://", "http://");
+                            if let Some(ref dc) = direct_client {
+                                if let Ok(resp) = dc.get(&http_target).send().await {
+                                    if resp.status().is_success() {
+                                        if let Ok(html) = resp.text().await {
+                                            html_opt = Some(html);
                                         }
                                     }
                                 }

@@ -46,7 +46,7 @@ impl ProxyManager {
     pub async fn load_proxies_from_db(&self, db: &crate::db::Database) {
         if let Ok(proxies) = db.get_proxies() {
             let active_urls: Vec<String> = proxies.into_iter()
-                .filter(|p| p.active)
+                .filter(|p| p.active && (p.fail_count < 3 || p.success_count > p.fail_count))
                 .map(|p| p.url)
                 .collect();
             let mut list = self.proxies.write().await;
@@ -86,5 +86,15 @@ impl ProxyManager {
         headers.insert("Upgrade-Insecure-Requests", HeaderValue::from_static("1"));
 
         headers
+    }
+
+    /// Background 60-second automated health checker for proxy rotation pool
+    pub fn start_proxy_health_checker(mgr: Self, db: crate::db::Database) {
+        tokio::spawn(async move {
+            loop {
+                mgr.load_proxies_from_db(&db).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+            }
+        });
     }
 }
