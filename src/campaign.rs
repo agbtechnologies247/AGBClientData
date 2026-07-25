@@ -223,9 +223,17 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
         let db_arc = Arc::new(db.clone());
         let config_arc = Arc::new(config);
 
+        let fallback_host = std::env::var("SMTP_FALLBACK_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let fallback_mailer = Arc::new(
+            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&fallback_host)
+                .port(25)
+                .build()
+        );
+
         stream::iter(unsent_people)
             .for_each_concurrent(5, |person| {
                 let mailer = mailer.clone();
+                let fallback_mailer = fallback_mailer.clone();
                 let validator = validator.clone();
                 let db = db_arc.clone();
                 let config = config_arc.clone();
@@ -293,16 +301,23 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                             Err(_) => return,
                         };
 
-                    match mailer.send(email).await {
-                        Ok(_) => {
-                            sent_count.fetch_add(1, Ordering::SeqCst);
-                            let history_id = db.record_sent_email_history(&email_addr, &person.company_name, "SENT").unwrap_or(0);
-                            let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {}) [ID: {}]", email_addr, person.name, person.title, history_id));
+                    let send_res = mailer.send(email.clone()).await;
+                    let mut success = send_res.is_ok();
+
+                    if !success {
+                        if fallback_mailer.send(email).await.is_ok() {
+                            success = true;
                         }
-                        Err(e) => {
-                            let _ = db.record_sent_email_history(&email_addr, &person.company_name, "FAILED");
-                            let _ = db.log_event("ERROR", &person.company_domain, &format!("SMTP error to {}: {}", email_addr, e));
-                        }
+                    }
+
+                    if success {
+                        sent_count.fetch_add(1, Ordering::SeqCst);
+                        let history_id = db.record_sent_email_history(&email_addr, &person.company_name, "SENT").unwrap_or(0);
+                        let _ = db.log_event("SUCCESS", &person.company_domain, &format!("Executive outreach email sent to {} ({}, {}) [ID: {}]", email_addr, person.name, person.title, history_id));
+                    } else {
+                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                        let _ = db.record_sent_email_history(&email_addr, &person.company_name, "FAILED");
+                        let _ = db.log_event("ERROR", &person.company_domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
                     }
 
                     sleep(Duration::from_millis(150)).await;
@@ -338,9 +353,17 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
         let db_arc = Arc::new(db.clone());
         let config_arc = Arc::new(config);
 
+        let fallback_host = std::env::var("SMTP_FALLBACK_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let fallback_mailer = Arc::new(
+            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&fallback_host)
+                .port(25)
+                .build()
+        );
+
         stream::iter(unsent_investors)
             .for_each_concurrent(5, |inv| {
                 let mailer = mailer.clone();
+                let fallback_mailer = fallback_mailer.clone();
                 let validator = validator.clone();
                 let db = db_arc.clone();
                 let config = config_arc.clone();
@@ -410,16 +433,23 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                             Err(_) => return,
                         };
 
-                    match mailer.send(email).await {
-                        Ok(_) => {
-                            sent_count.fetch_add(1, Ordering::SeqCst);
-                            let history_id = db.record_sent_email_history(&email_addr, &inv.name, "SENT").unwrap_or(0);
-                            let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {}) [ID: {}]", email_addr, inv.name, inv.investor_type, history_id));
+                    let send_res = mailer.send(email.clone()).await;
+                    let mut success = send_res.is_ok();
+
+                    if !success {
+                        if fallback_mailer.send(email).await.is_ok() {
+                            success = true;
                         }
-                        Err(e) => {
-                            let _ = db.record_sent_email_history(&email_addr, &inv.name, "FAILED");
-                            let _ = db.log_event("ERROR", &inv.website, &format!("SMTP error to {}: {}", email_addr, e));
-                        }
+                    }
+
+                    if success {
+                        sent_count.fetch_add(1, Ordering::SeqCst);
+                        let history_id = db.record_sent_email_history(&email_addr, &inv.name, "SENT").unwrap_or(0);
+                        let _ = db.log_event("SUCCESS", &inv.website, &format!("Investor outreach email sent to {} ({}, {}) [ID: {}]", email_addr, inv.name, inv.investor_type, history_id));
+                    } else {
+                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                        let _ = db.record_sent_email_history(&email_addr, &inv.name, "FAILED");
+                        let _ = db.log_event("ERROR", &inv.website, &format!("SMTP error to {}: {}", email_addr, err_msg));
                     }
 
                     sleep(Duration::from_millis(150)).await;
@@ -456,9 +486,17 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
         let db_arc = Arc::new(db.clone());
         let config_arc = Arc::new(config);
 
+        let fallback_host = std::env::var("SMTP_FALLBACK_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let fallback_mailer = Arc::new(
+            AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(&fallback_host)
+                .port(25)
+                .build()
+        );
+
         stream::iter(unsent_leads)
             .for_each_concurrent(5, |company| {
                 let mailer = mailer.clone();
+                let fallback_mailer = fallback_mailer.clone();
                 let validator = validator.clone();
                 let db = db_arc.clone();
                 let config = config_arc.clone();
@@ -522,16 +560,23 @@ If you prefer not to receive future communications, please reply with "UNSUBSCRI
                             Err(_) => return,
                         };
 
-                    match mailer.send(email).await {
-                        Ok(_) => {
-                            sent_count.fetch_add(1, Ordering::SeqCst);
-                            let history_id = db.record_sent_email_history(&email_addr, &company.name, "SENT").unwrap_or(0);
-                            let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {} [ID: {}]", email_addr, history_id));
+                    let send_res = mailer.send(email.clone()).await;
+                    let mut success = send_res.is_ok();
+
+                    if !success {
+                        if fallback_mailer.send(email).await.is_ok() {
+                            success = true;
                         }
-                        Err(e) => {
-                            let _ = db.record_sent_email_history(&email_addr, &company.name, "FAILED");
-                            let _ = db.log_event("ERROR", &company.domain, &format!("SMTP error to {}: {}", email_addr, e));
-                        }
+                    }
+
+                    if success {
+                        sent_count.fetch_add(1, Ordering::SeqCst);
+                        let history_id = db.record_sent_email_history(&email_addr, &company.name, "SENT").unwrap_or(0);
+                        let _ = db.log_event("SUCCESS", &company.domain, &format!("Company outreach email sent to {} [ID: {}]", email_addr, history_id));
+                    } else {
+                        let err_msg = send_res.err().map(|e| e.to_string()).unwrap_or_else(|| "SMTP error".to_string());
+                        let _ = db.record_sent_email_history(&email_addr, &company.domain, "FAILED");
+                        let _ = db.log_event("ERROR", &company.domain, &format!("SMTP error to {}: {}", email_addr, err_msg));
                     }
 
                     sleep(Duration::from_millis(150)).await;
