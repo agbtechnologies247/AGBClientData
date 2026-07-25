@@ -394,11 +394,12 @@ impl Database {
 
     pub fn is_domain_crawled(&self, domain: &str) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
+        let seven_days_ago = (Utc::now() - chrono::Duration::days(7)).to_rfc3339();
         let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1 AND status = 'COMPLETED'",
-            params![domain],
+            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1 AND status = 'COMPLETED' AND last_crawled > ?2",
+            params![domain, seven_days_ago],
             |r| r.get(0),
-        )?;
+        ).unwrap_or(0);
         Ok(count > 0)
     }
 
@@ -900,15 +901,6 @@ impl Database {
 
     pub fn enqueue_domain(&self, domain: &str, url: &str) -> Result<bool> {
         let conn = self.conn.lock().unwrap();
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM crawled_domains WHERE domain = ?1",
-            params![domain],
-            |r| r.get(0),
-        )?;
-        if count > 0 {
-            return Ok(false);
-        }
-
         let inserted = conn.execute(
             "INSERT OR IGNORE INTO crawl_queue (domain, url, depth, status) VALUES (?1, ?2, 0, 'PENDING')",
             params![domain, url],
@@ -921,7 +913,6 @@ impl Database {
         let mut stmt = conn.prepare(
             "SELECT id, domain, url FROM crawl_queue 
              WHERE status = 'PENDING' 
-             AND domain NOT IN (SELECT domain FROM crawled_domains) 
              LIMIT ?"
         )?;
         
